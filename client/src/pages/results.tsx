@@ -220,7 +220,7 @@ export default function Results() {
               <ItineraryTimeline activities={itinerary.activities} />
             </div>
           </Card>
-        </div>
+        </motion.div>
         
         {/* Recommendations section */}
         {itinerary.recommendations && itinerary.recommendations.length > 0 && (
