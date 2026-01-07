@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface ScrapbookImageProps {
@@ -7,6 +7,17 @@ interface ScrapbookImageProps {
   className?: string;
   fallback?: string;
   onLoad?: () => void;
+  priority?: boolean;
+}
+
+// Generate a better placeholder image
+function generatePlaceholder(width: number, height: number, text: string): string {
+  const colors = [
+    "FFE5B4", "FFD1DC", "E0BBE4", "DDA0DD", "B19CD9",
+    "FFB6C1", "FFA07A", "98D8C8", "F7DC6F", "AED6F1"
+  ];
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  return `https://via.placeholder.com/${width}x${height}/${color}/FFFFFF?text=${encodeURIComponent(text)}`;
 }
 
 export function ScrapbookImage({ 
@@ -14,20 +25,42 @@ export function ScrapbookImage({
   alt, 
   className = "", 
   fallback,
-  onLoad 
+  onLoad,
+  priority = false
 }: ScrapbookImageProps) {
   const [imageSrc, setImageSrc] = useState(src);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  // Update image source when src prop changes
+  useEffect(() => {
+    if (src && src !== imageSrc) {
+      setImageSrc(src);
+      setIsLoaded(false);
+      setHasError(false);
+      setRetryCount(0);
+    }
+  }, [src]);
 
   const handleError = () => {
+    if (retryCount < 2 && imageSrc) {
+      // Retry with different image parameters
+      setRetryCount(prev => prev + 1);
+      const retrySrc = imageSrc.includes('?') 
+        ? `${imageSrc}&retry=${retryCount + 1}`
+        : `${imageSrc}?retry=${retryCount + 1}`;
+      setImageSrc(retrySrc);
+      return;
+    }
+
     if (!hasError) {
       setHasError(true);
       if (fallback) {
         setImageSrc(fallback);
       } else {
-        // Generate a placeholder with the alt text
-        const placeholder = `https://via.placeholder.com/800x600/f0f0f0/666666?text=${encodeURIComponent(alt)}`;
+        // Generate a colorful placeholder
+        const placeholder = generatePlaceholder(800, 600, alt || "Image");
         setImageSrc(placeholder);
       }
     }
@@ -40,24 +73,55 @@ export function ScrapbookImage({
     }
   };
 
+  // Preload image if priority
+  useEffect(() => {
+    if (priority && src) {
+      const img = new Image();
+      img.src = src;
+    }
+  }, [priority, src]);
+
   return (
     <div className={`relative overflow-hidden ${className}`}>
       <motion.img
         src={imageSrc}
         alt={alt}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
+        className={`w-full h-full object-cover transition-opacity duration-500 ${
           isLoaded ? "opacity-100" : "opacity-0"
         }`}
         onError={handleError}
         onLoad={handleLoad}
-        loading="lazy"
-        initial={{ scale: 1 }}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        initial={{ scale: 1, opacity: 0 }}
+        animate={{ scale: isLoaded ? 1 : 1.02, opacity: isLoaded ? 1 : 0 }}
         whileHover={{ scale: 1.05 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        style={{ 
+          imageRendering: "auto",
+          backfaceVisibility: "hidden",
+          transform: "translateZ(0)"
+        }}
       />
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-pink-100 animate-pulse flex items-center justify-center">
-          <div className="text-gray-400 text-sm">Loading...</div>
+      {!isLoaded && !hasError && (
+        <motion.div 
+          className="absolute inset-0 bg-gradient-to-br from-amber-100 via-pink-100 to-rose-100 flex items-center justify-center"
+          initial={{ opacity: 1 }}
+          animate={{ opacity: [1, 0.7, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+        >
+          <div className="flex flex-col items-center">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+            <div className="text-gray-500 text-xs">Loading image...</div>
+          </div>
+        </motion.div>
+      )}
+      {hasError && !isLoaded && (
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+          <div className="text-center p-4">
+            <i className="fas fa-image text-gray-400 text-2xl mb-2"></i>
+            <div className="text-gray-500 text-xs">{alt || "Image"}</div>
+          </div>
         </div>
       )}
     </div>

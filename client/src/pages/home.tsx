@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { ScrapbookImage } from "@/components/ui/scrapbook-image";
+import { InteractiveCalendar } from "@/components/ui/interactive-calendar";
 
 // Places data for carousel
 const places = [
@@ -146,7 +147,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.5 }}
-            className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-16"
+            className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-12"
           >
             <Button
               onClick={handleStartPlanning}
@@ -169,11 +170,21 @@ export default function Home() {
           </motion.div>
         </motion.div>
 
+        {/* Interactive Calendar Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, duration: 0.6 }}
+          className="mb-16 max-w-4xl mx-auto"
+        >
+          <InteractiveCalendar />
+        </motion.div>
+
         {/* Moving Places Carousel */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.5 }}
+          transition={{ delay: 1.0, duration: 0.5 }}
           className="mb-16"
         >
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-center mb-8">
@@ -222,6 +233,7 @@ export default function Home() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
+          transition={{ delay: 1.2 }}
           className="mb-16"
         >
           <h2 className="text-3xl md:text-4xl font-heading font-bold text-center mb-12">

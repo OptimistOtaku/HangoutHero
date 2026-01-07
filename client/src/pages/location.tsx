@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProgressSteps } from "@/components/ui/progress-steps";
 import { PreferenceFormData, LocationFormData } from "@/lib/openai";
+import { ScrapbookImage } from "@/components/ui/scrapbook-image";
+import { motion } from "framer-motion";
 
 interface LocationOption {
   name: string;
@@ -131,21 +133,53 @@ export default function Location() {
             <div className="mb-8">
               <h3 className="font-heading font-medium text-lg mb-4">Popular locations</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {locations.map((location) => (
-                  <div 
+                {locations.map((location, index) => (
+                  <motion.div
                     key={location.name}
-                    className={`cursor-pointer rounded-xl overflow-hidden relative h-32 group ${location.selected ? 'border-2 border-primary' : ''}`}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`cursor-pointer rounded-xl overflow-hidden relative h-32 group border-4 border-white shadow-lg ${
+                      location.selected ? 'border-primary ring-4 ring-primary/20' : ''
+                    }`}
                     onClick={() => selectLocation(location.name)}
+                    style={{
+                      boxShadow: location.selected 
+                        ? "0 8px 32px rgba(255, 56, 92, 0.3), inset 0 0 0 1px rgba(255,255,255,0.2)"
+                        : "0 4px 16px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.2)",
+                    }}
                   >
-                    <img 
-                      src={location.image} 
-                      alt={`${location.name} cityscape`} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    <ScrapbookImage
+                      src={location.image}
+                      alt={`${location.name} cityscape`}
+                      className="w-full h-full"
+                      fallback={location.image}
                     />
-                    <div className={`absolute inset-0 ${location.selected ? 'bg-primary/30' : 'bg-black/30'} group-hover:bg-black/20 flex items-center justify-center transition-colors`}>
-                      <span className="text-white font-medium text-lg">{location.name}</span>
+                    <div className={`absolute inset-0 ${
+                      location.selected ? 'bg-primary/40' : 'bg-black/40'
+                    } group-hover:bg-black/30 flex items-center justify-center transition-all duration-300`}>
+                      <motion.span
+                        className="text-white font-heading font-bold text-lg md:text-xl"
+                        animate={{ scale: location.selected ? 1.1 : 1 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {location.name}
+                      </motion.span>
                     </div>
-                  </div>
+                    {location.selected && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center"
+                      >
+                        <i className="fas fa-check text-white text-xs"></i>
+                      </motion.div>
+                    )}
+                    {/* Scrapbook decoration */}
+                    <div className="absolute top-2 left-2 w-6 h-4 bg-yellow-200/80 rotate-[-15deg] shadow-sm opacity-70"></div>
+                  </motion.div>
                 ))}
               </div>
             </div>
