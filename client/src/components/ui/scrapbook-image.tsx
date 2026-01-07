@@ -8,6 +8,9 @@ interface ScrapbookImageProps {
   fallback?: string;
   onLoad?: () => void;
   priority?: boolean;
+  polaroid?: boolean;
+  caption?: string;
+  rotation?: number;
 }
 
 // Generate a better placeholder image
@@ -26,7 +29,10 @@ export function ScrapbookImage({
   className = "", 
   fallback,
   onLoad,
-  priority = false
+  priority = false,
+  polaroid = false,
+  caption,
+  rotation = 0,
 }: ScrapbookImageProps) {
   const [imageSrc, setImageSrc] = useState(src);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -81,28 +87,65 @@ export function ScrapbookImage({
     }
   }, [priority, src]);
 
+  // Polaroid / scrapbook style wrapper
+  const imgElement = (
+    <motion.img
+      src={imageSrc}
+      alt={alt}
+      className={`w-full h-full object-cover transition-opacity duration-500 ${
+        isLoaded ? "opacity-100" : "opacity-0"
+      }`}
+      onError={handleError}
+      onLoad={handleLoad}
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      initial={{ scale: 1, opacity: 0 }}
+      animate={{ scale: isLoaded ? 1 : 1.02, opacity: isLoaded ? 1 : 0 }}
+      whileHover={{ scale: 1.05 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      style={{ 
+        imageRendering: "auto",
+        backfaceVisibility: "hidden",
+        transform: "translateZ(0)"
+      }}
+    />
+  );
+
+  if (polaroid) {
+    return (
+      <div
+        className={`relative inline-block ${className}`}
+        style={{ transform: `rotate(${rotation}deg)` }}
+      >
+        <div className="bg-white p-3 rounded-sm shadow-2xl border-2 border-gray-100" style={{ width: 260 }}>
+          <div className="w-full h-40 overflow-hidden rounded-sm">
+            {imgElement}
+          </div>
+          <div className="pt-3 pb-1 text-center">
+            <div className="text-sm font-heading font-semibold text-gray-800 truncate">
+              {caption || alt}
+            </div>
+          </div>
+        </div>
+        {!isLoaded && !hasError && (
+          <motion.div 
+            className="absolute inset-0 bg-gradient-to-br from-amber-100 via-pink-100 to-rose-100 flex items-center justify-center"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: [1, 0.7, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            <div className="flex flex-col items-center">
+              <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+            </div>
+          </motion.div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      <motion.img
-        src={imageSrc}
-        alt={alt}
-        className={`w-full h-full object-cover transition-opacity duration-500 ${
-          isLoaded ? "opacity-100" : "opacity-0"
-        }`}
-        onError={handleError}
-        onLoad={handleLoad}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        initial={{ scale: 1, opacity: 0 }}
-        animate={{ scale: isLoaded ? 1 : 1.02, opacity: isLoaded ? 1 : 0 }}
-        whileHover={{ scale: 1.05 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        style={{ 
-          imageRendering: "auto",
-          backfaceVisibility: "hidden",
-          transform: "translateZ(0)"
-        }}
-      />
+      {imgElement}
       {!isLoaded && !hasError && (
         <motion.div 
           className="absolute inset-0 bg-gradient-to-br from-amber-100 via-pink-100 to-rose-100 flex items-center justify-center"

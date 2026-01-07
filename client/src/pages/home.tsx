@@ -111,9 +111,10 @@ export default function Home() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="mb-16 grid md:grid-cols-2 items-center gap-8"
         >
-          <motion.h1
+          <div className="text-center md:text-left">
+            <motion.h1
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
@@ -131,23 +132,23 @@ export default function Home() {
                 style={{ transformOrigin: "left" }}
               />
             </span>
-          </motion.h1>
-          
-          <motion.p
+            </motion.h1>
+            
+            <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.5 }}
-            className="text-xl md:text-2xl text-gray-700 mb-10 max-w-3xl mx-auto leading-relaxed"
+              className="text-xl md:text-2xl text-gray-700 mb-10 max-w-3xl leading-relaxed"
           >
             Let our AI create a personalized day plan based on your preferences and location. 
             <span className="block mt-2 text-lg text-gray-600">No more endless searching or decision fatigue.</span>
           </motion.p>
           
-          <motion.div
+            <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.5 }}
-            className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-12"
+              className="flex flex-col sm:flex-row justify-start items-center gap-4 mb-12"
           >
             <Button
               onClick={handleStartPlanning}
@@ -167,7 +168,55 @@ export default function Home() {
             >
               Browse Examples
             </Button>
-          </motion.div>
+            </motion.div>
+          </div>
+
+          {/* Polaroid image stack */}
+          <div className="hidden md:flex justify-center items-center">
+            <div className="relative w-80 h-56">
+              {(() => {
+                const prev = (currentPlaceIndex - 1 + places.length) % places.length;
+                const next = (currentPlaceIndex + 1) % places.length;
+                return (
+                  <div className="relative w-full h-full">
+                    <div className="absolute -left-6 top-2 transform">
+                      <ScrapbookImage
+                        polaroid
+                        rotation={-8}
+                        caption={`${places[prev].name} · ${places[prev].tagline}`}
+                        src={places[prev].image}
+                        alt={places[prev].name}
+                      />
+                    </div>
+                    <div className="absolute left-6 top-0 transform">
+                      <button
+                        aria-label="Shuffle images"
+                        onClick={() => setCurrentPlaceIndex((Math.random() * places.length) | 0)}
+                        className="focus:outline-none"
+                      >
+                        <ScrapbookImage
+                          polaroid
+                          rotation={2}
+                          caption={`${places[currentPlaceIndex].name} · ${places[currentPlaceIndex].tagline}`}
+                          src={places[currentPlaceIndex].image}
+                          alt={places[currentPlaceIndex].name}
+                        />
+                      </button>
+                    </div>
+                    <div className="absolute right-0 top-6 transform">
+                      <ScrapbookImage
+                        polaroid
+                        rotation={8}
+                        caption={`${places[next].name} · ${places[next].tagline}`}
+                        src={places[next].image}
+                        alt={places[next].name}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
         </motion.div>
 
         {/* Interactive Calendar Section */}
