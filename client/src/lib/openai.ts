@@ -40,6 +40,7 @@ export interface Recommendation {
 }
 
 export interface ItineraryResponse {
+  id?: number;
   title: string;
   description: string;
   location: string;
@@ -56,6 +57,22 @@ export async function generateItinerary(
     locationData,
   });
   return await response.json();
+}
+
+export async function saveItinerary(
+  itinerary: ItineraryResponse
+): Promise<{ id: number; message: string }> {
+  try {
+    const response = await apiRequest("POST", "/api/save-itinerary", {
+      itinerary,
+    });
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error in saveItinerary:", error);
+    // Re-throw with more context
+    throw error;
+  }
 }
 
 // Utility function to map image categories to activities based on type

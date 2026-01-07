@@ -81,7 +81,8 @@
   }
 
   body {
-    @apply bg-gray-50 text-foreground font-body antialiased;
+    @apply bg-gradient-to-br from-amber-50 via-pink-50 to-rose-50 text-foreground font-body antialiased;
+    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -155,4 +156,41 @@
 .no-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
+}
+
+/* Scrapbook theme styles */
+.scrapbook-paper {
+  background: linear-gradient(135deg, #fef9e7 0%, #fef5e7 100%);
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.scrapbook-tape {
+  background: rgba(255, 255, 200, 0.8);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.scrapbook-border {
+  border: 3px solid #f4d03f;
+  box-shadow: 
+    0 0 0 2px #fff,
+    0 0 0 4px #f4d03f,
+    inset 0 0 20px rgba(244, 208, 63, 0.1);
+}
+
+/* Image loading fix */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+img[loading="lazy"] {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+img[loading="lazy"].loaded {
+  opacity: 1;
 }

@@ -3,8 +3,12 @@ import { Button } from "@/components/ui/button";
 
 export default function Footer() {
   return (
-    <footer className="bg-white border-t border-gray-300 mt-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <footer className="bg-gradient-to-br from-amber-50 to-pink-50 border-t-4 border-amber-200/50 mt-12 relative overflow-hidden">
+      {/* Scrapbook decorative elements */}
+      <div className="absolute top-0 left-1/4 w-24 h-24 bg-yellow-200/20 rotate-12 transform -translate-y-8"></div>
+      <div className="absolute bottom-0 right-1/4 w-20 h-20 bg-pink-200/20 -rotate-12 transform translate-y-4"></div>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           <div>
             <h3 className="font-heading font-bold text-lg mb-4">About</h3>
@@ -18,10 +22,10 @@ export default function Footer() {
           <div>
             <h3 className="font-heading font-bold text-lg mb-4">Destinations</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">San Francisco</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">New York</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Los Angeles</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Chicago</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Delhi</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Noida</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Jaipur</a></li>
+              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Mussoorie</a></li>
             </ul>
           </div>
           <div>
@@ -54,8 +58,11 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <div className="mt-12 pt-8 border-t border-gray-300 text-center text-gray-700">
-          <p>© {new Date().getFullYear()} Wanderplan. All rights reserved.</p>
+        <div className="mt-12 pt-8 border-t-2 border-amber-200/50 text-center text-gray-700 relative">
+          <p className="relative inline-block">
+            © {new Date().getFullYear()} <span className="font-heading font-bold text-primary">HangoutHero</span>. All rights reserved.
+            <span className="absolute -bottom-1 left-0 right-0 h-1 bg-yellow-200/40 transform -skew-x-12"></span>
+          </p>
         </div>
       </div>
     </footer>

@@ -2,12 +2,12 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize OpenAI API client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Initialize Gemini API client
+const genAI = new GoogleGenerativeAI(
+  process.env.GEMINI_API_KEY || "AIzaSyAJUNmvY8b81BxN61kpaVu8TfGAl93yteo"
+);
 
 // Validation schemas
 const preferenceSchema = z.object({
@@ -69,64 +69,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Initialize itinerary data
       let itineraryData: ItineraryResponse;
-      let useOpenAI = true;
+      let useGemini = true;
       
-      // Try to use OpenAI first
+      // Try to use Gemini first
       try {
-        console.log("Attempting to use OpenAI for personalized itinerary...");
+        console.log("Attempting to use Gemini for personalized itinerary...");
         
-        // Prepare the prompt for OpenAI
-        const prompt = `
-          Generate a personalized hangout itinerary for ${locationData.location}.
-          
-          Preferences:
-          - Activities: ${preferences.hangoutTypes.join(", ")}
-          - Duration: ${preferences.duration}
-          - Budget: ${preferences.budget}
-          - Maximum travel distance: ${locationData.distance}
-          - Transportation: ${locationData.transportation.join(", ")}
-          
-          Please generate a complete itinerary with realistic locations, descriptions, and timeline. 
-          The response should be in JSON format and include:
-          1. A title and description for the itinerary
-          2. The location
-          3. A list of 6 activities (2 morning, 2 afternoon, 2 evening) with:
-             - Unique ID
-             - Time (e.g., "9:00 AM")
-             - Title
-             - Description
-             - Location (street address and neighborhood)
-             - Price category (use "₹" for budget, "₹₹" for moderate, "₹₹₹" for expensive)
-             - Rating (e.g., "4.8 ★")
-             - Type (one of: "exploring", "eating", "historical", "cafe")
-             - Time of day category ("morning", "afternoon", or "evening")
-          4. Three relevant recommended similar adventures with title, description, rating, and duration.
-          
-          Make activities specific to the location, realistic, and based on actual venues. Include exact addresses.
-          Format all times appropriately. Make sure descriptions are engaging and 1-2 sentences long.
-          Focus on authentic Indian experiences.
-        `;
+        // Prepare the prompt for Gemini
+        const prompt = `You are an expert travel planner with deep knowledge of Indian locations. You create detailed, realistic itineraries based on user preferences.
 
-        // Request completion from OpenAI
-        // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "system",
-              content: "You are an expert travel planner with deep knowledge of Indian locations. You create detailed, realistic itineraries based on user preferences."
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          response_format: { type: "json_object" },
-          temperature: 0.7
+Generate a personalized hangout itinerary for ${locationData.location}.
+
+Preferences:
+- Activities: ${preferences.hangoutTypes.join(", ")}
+- Duration: ${preferences.duration}
+- Budget: ${preferences.budget}
+- Maximum travel distance: ${locationData.distance}
+- Transportation: ${locationData.transportation.join(", ")}
+
+Please generate a complete itinerary with realistic locations, descriptions, and timeline. 
+The response must be valid JSON format only (no markdown, no code blocks) and include:
+1. A title and description for the itinerary
+2. The location
+3. A list of 6 activities (2 morning, 2 afternoon, 2 evening) with:
+   - Unique ID (string)
+   - Time (e.g., "9:00 AM")
+   - Title
+   - Description
+   - Location (street address and neighborhood)
+   - Price category (use "₹" for budget, "₹₹" for moderate, "₹₹₹" for expensive)
+   - Rating (e.g., "4.8 ★")
+   - Type (one of: "exploring", "eating", "historical", "cafe")
+   - Time of day category ("morning", "afternoon", or "evening")
+4. Three relevant recommended similar adventures with id, title, description, rating, and duration.
+
+Make activities specific to the location, realistic, and based on actual venues. Include exact addresses.
+Format all times appropriately. Make sure descriptions are engaging and 1-2 sentences long.
+Focus on authentic Indian experiences.
+
+Return only valid JSON without any markdown formatting or code blocks.`;
+
+        // Get the Gemini model with JSON response format
+        const model = genAI.getGenerativeModel({ 
+          model: "gemini-1.5-pro",
+          generationConfig: {
+            temperature: 0.7,
+            responseMimeType: "application/json",
+          }
         });
 
+        // Request completion from Gemini
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const responseText = response.text();
+
         // Parse the response
-        const generatedData = JSON.parse(response.choices[0].message.content || "{}");
+        const generatedData = JSON.parse(responseText);
         
         // Add image URLs to activities based on their type
         if (generatedData.activities && Array.isArray(generatedData.activities)) {
@@ -145,15 +143,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         itineraryData = generatedData;
-        console.log("Successfully generated personalized itinerary using AI");
+        console.log("Successfully generated personalized itinerary using Gemini AI");
         
       } catch (apiError) {
-        console.log("OpenAI API error, using fallback data:", apiError);
-        useOpenAI = false;
+        console.log("Gemini API error, using fallback data:", apiError);
+        useGemini = false;
       }
       
-      // If OpenAI API failed or reached rate limit, use pre-configured data
-      if (!useOpenAI) {
+      // If Gemini API failed or reached rate limit, use pre-configured data
+      if (!useGemini) {
         console.log("Using pre-configured itinerary data for", locationData.location);
         
         // Create itineraries for different locations
@@ -598,13 +596,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Save the generated itinerary to storage
-      const savedItinerary = await storage.saveItinerary(itineraryData);
-      
-      // Send the response
-      res.json(savedItinerary);
+      try {
+        const savedItinerary = await storage.saveItinerary(itineraryData);
+        console.log("Generated itinerary saved with ID:", savedItinerary.id);
+        
+        // Send the response with itinerary ID included
+        res.json({
+          id: savedItinerary.id,
+          ...savedItinerary.itinerary
+        });
+      } catch (saveError) {
+        console.error("Error saving generated itinerary (non-fatal):", saveError);
+        // Still return the itinerary even if save fails
+        res.json(itineraryData);
+      }
     } catch (error) {
       console.error("Error generating itinerary:", error);
       res.status(500).json({ message: "Failed to generate itinerary. Please try again." });
+    }
+  });
+
+  // API endpoint to save an itinerary (explicit save action)
+  app.post("/api/save-itinerary", async (req: Request, res: Response) => {
+    try {
+      const { itinerary } = req.body;
+      
+      console.log("Save itinerary request received:", { 
+        hasItinerary: !!itinerary,
+        hasTitle: !!itinerary?.title,
+        hasLocation: !!itinerary?.location,
+        hasId: !!itinerary?.id
+      });
+      
+      if (!itinerary || !itinerary.title || !itinerary.location) {
+        console.error("Invalid itinerary data:", JSON.stringify(itinerary, null, 2));
+        return res.status(400).json({ message: "Invalid itinerary data: missing title or location" });
+      }
+
+      // Validate required fields
+      if (!itinerary.activities || !Array.isArray(itinerary.activities)) {
+        console.error("Invalid itinerary: activities missing or not an array");
+        return res.status(400).json({ message: "Invalid itinerary data: activities must be an array" });
+      }
+
+      if (!itinerary.recommendations || !Array.isArray(itinerary.recommendations)) {
+        console.error("Invalid itinerary: recommendations missing or not an array");
+        return res.status(400).json({ message: "Invalid itinerary data: recommendations must be an array" });
+      }
+
+      // Remove id if present (we'll create a new save entry)
+      const { id, ...itineraryWithoutId } = itinerary;
+      
+      const savedItinerary = await storage.saveItinerary(itineraryWithoutId);
+      
+      console.log("Itinerary saved successfully with ID:", savedItinerary.id);
+      
+      res.json({
+        id: savedItinerary.id,
+        message: "Itinerary saved successfully",
+        itinerary: savedItinerary.itinerary
+      });
+    } catch (error) {
+      console.error("Error saving itinerary:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        message: "Failed to save itinerary. Please try again.",
+        error: errorMessage
+      });
+    }
+  });
+
+  // API endpoint to get a saved itinerary by ID
+  app.get("/api/itinerary/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid itinerary ID" });
+      }
+
+      const itinerary = await storage.getItinerary(id);
+      
+      if (!itinerary) {
+        return res.status(404).json({ message: "Itinerary not found" });
+      }
+
+      // Convert to ItineraryResponse format
+      res.json({
+        id: itinerary.id,
+        title: itinerary.title,
+        description: itinerary.description,
+        location: itinerary.location,
+        activities: itinerary.activities as any,
+        recommendations: itinerary.recommendations as any,
+        createdAt: itinerary.createdAt,
+      });
+    } catch (error) {
+      console.error("Error retrieving itinerary:", error);
+      res.status(500).json({ message: "Failed to retrieve itinerary. Please try again." });
+    }
+  });
+
+  // API endpoint to get all saved itineraries
+  app.get("/api/itineraries", async (req: Request, res: Response) => {
+    try {
+      const itineraries = await storage.getAllItineraries();
+      
+      // Convert to response format
+      const formatted = itineraries.map(it => ({
+        id: it.id,
+        title: it.title,
+        description: it.description,
+        location: it.location,
+        activities: it.activities as any,
+        recommendations: it.recommendations as any,
+        createdAt: it.createdAt,
+      }));
+
+      res.json(formatted);
+    } catch (error) {
+      console.error("Error retrieving itineraries:", error);
+      res.status(500).json({ message: "Failed to retrieve itineraries. Please try again." });
     }
   });
 

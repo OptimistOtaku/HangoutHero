@@ -6,18 +6,25 @@ import { ProgressSteps } from "@/components/ui/progress-steps";
 import { ItineraryTimeline } from "@/components/ui/itinerary-timeline";
 import { RecommendationCard } from "@/components/ui/recommendation-card";
 import { useToast } from "@/hooks/use-toast";
-import { ItineraryResponse } from "@/lib/openai";
+import { ItineraryResponse, saveItinerary } from "@/lib/openai";
 
 export default function Results() {
   const { toast } = useToast();
   const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     // Retrieve itinerary data from session storage
     const itineraryData = sessionStorage.getItem('itineraryData');
     
     if (itineraryData) {
-      setItinerary(JSON.parse(itineraryData));
+      const parsed = JSON.parse(itineraryData);
+      setItinerary(parsed);
+      // Check if itinerary already has an ID (was saved)
+      if (parsed.id) {
+        setIsSaved(true);
+      }
     } else {
       toast({
         title: "Missing itinerary data",
@@ -41,11 +48,44 @@ export default function Results() {
     });
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Save feature",
-      description: "This feature is coming soon!",
-    });
+  const handleSave = async () => {
+    if (!itinerary || isSaved) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      console.log("Attempting to save itinerary:", itinerary);
+      const result = await saveItinerary(itinerary);
+      console.log("Save result:", result);
+      
+      // Update itinerary with the saved ID
+      const updatedItinerary = { ...itinerary, id: result.id };
+      setItinerary(updatedItinerary);
+      setIsSaved(true);
+      
+      // Update session storage
+      sessionStorage.setItem('itineraryData', JSON.stringify(updatedItinerary));
+      
+      toast({
+        title: "Itinerary saved!",
+        description: "Your itinerary has been saved successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving itinerary:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast({
+        title: "Failed to save",
+        description: errorMessage.includes("400") 
+          ? "Invalid itinerary data. Please try generating a new itinerary."
+          : errorMessage.includes("500")
+          ? "Server error. Please try again later."
+          : `Could not save your itinerary: ${errorMessage}`,
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCustomize = () => {
@@ -91,8 +131,21 @@ export default function Results() {
                     variant="outline" 
                     className="border border-gray-300 hover:border-primary text-text"
                     onClick={handleSave}
+                    disabled={isSaving || isSaved}
                   >
-                    <i className="fas fa-download mr-2"></i> Save
+                    {isSaving ? (
+                      <>
+                        <i className="fas fa-spinner fa-spin mr-2"></i> Saving...
+                      </>
+                    ) : isSaved ? (
+                      <>
+                        <i className="fas fa-check mr-2"></i> Saved
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-download mr-2"></i> Save
+                      </>
+                    )}
                   </Button>
                   <Button 
                     className="bg-primary hover:bg-[#FF6B85] text-white"
