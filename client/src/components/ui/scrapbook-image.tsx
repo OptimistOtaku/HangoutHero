@@ -38,6 +38,7 @@ export function ScrapbookImage({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [unsplashTried, setUnsplashTried] = useState(false);
 
   // Update image source when src prop changes
   useEffect(() => {
@@ -60,9 +61,17 @@ export function ScrapbookImage({
       return;
     }
 
+    // If retries exhausted, try a keyword-based Unsplash source once
+    if (!unsplashTried && alt) {
+      setUnsplashTried(true);
+      const keywordSrc = `https://source.unsplash.com/800x600/?${encodeURIComponent(alt)}`;
+      setImageSrc(keywordSrc);
+      return;
+    }
+
     if (!hasError) {
       setHasError(true);
-      if (fallback) {
+      if (fallback && fallback !== imageSrc) {
         setImageSrc(fallback);
       } else {
         // Generate a colorful placeholder
@@ -74,18 +83,34 @@ export function ScrapbookImage({
 
   const handleLoad = () => {
     setIsLoaded(true);
-    if (onLoad) {
-      onLoad();
-    }
+    if (onLoad) onLoad();
   };
 
   // Preload image if priority
   useEffect(() => {
-    if (priority && src) {
-      const img = new Image();
-      img.src = src;
-    }
-  }, [priority, src]);
+    let mounted = true;
+    if (!imageSrc) return;
+
+    const img = new Image();
+    img.src = imageSrc;
+    img.decoding = 'async';
+    img.onload = () => {
+      if (!mounted) return;
+      setIsLoaded(true);
+      setHasError(false);
+      if (onLoad) onLoad();
+    };
+    img.onerror = () => {
+      if (!mounted) return;
+      handleError();
+    };
+
+    return () => {
+      mounted = false;
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [imageSrc]);
 
   // Polaroid / scrapbook style wrapper
   const imgElement = (
@@ -117,7 +142,7 @@ export function ScrapbookImage({
         className={`relative inline-block ${className}`}
         style={{ transform: `rotate(${rotation}deg)` }}
       >
-        <div className="bg-white p-3 rounded-sm shadow-2xl border-2 border-gray-100" style={{ width: 260 }}>
+        <div className="bg-white p-3 rounded-sm shadow-2xl border-2 border-gray-100 w-64">
           <div className="w-full h-40 overflow-hidden rounded-sm">
             {imgElement}
           </div>
