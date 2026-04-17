@@ -11,7 +11,9 @@ export default function Questionnaire() {
   const [formData, setFormData] = useState<PreferenceFormData>({
     hangoutTypes: [],
     duration: "Full day",
-    budget: "Mid-range"
+    budget: "Mid-range",
+    groupSize: "Solo",
+    mood: []
   });
 
   const handleNext = () => {
@@ -41,6 +43,23 @@ export default function Questionnaire() {
 
   const setBudget = (budget: string) => {
     setFormData(prev => ({ ...prev, budget }));
+  };
+
+  const setGroupSize = (groupSize: string) => {
+    setFormData(prev => ({ ...prev, groupSize }));
+  };
+
+  const toggleMood = (mood: string) => {
+    setFormData(prev => {
+      const moods = [...prev.mood];
+      const index = moods.indexOf(mood);
+      if (index >= 0) {
+        moods.splice(index, 1);
+      } else {
+        moods.push(mood);
+      }
+      return { ...prev, mood: moods };
+    });
   };
 
   return (
@@ -179,6 +198,88 @@ export default function Questionnaire() {
                 ))}
               </div>
             </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+              className="mb-8"
+            >
+              <h3 className="font-heading font-medium text-lg mb-4 flex items-center gap-2">
+                <i className="fas fa-users text-primary"></i>
+                Who's coming with you?
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { value: "Solo", icon: "user", label: "Just me" },
+                  { value: "Couple", icon: "heart", label: "Couple" },
+                  { value: "Small Group", icon: "user-group", label: "Small Group (3-5)" },
+                  { value: "Large Group", icon: "users", label: "Large Group (6+)" }
+                ].map((group) => (
+                  <motion.div
+                    key={group.value}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      variant={formData.groupSize === group.value ? "default" : "outline"}
+                      className={`rounded-xl font-medium transition-all duration-200 ${
+                        formData.groupSize === group.value
+                          ? "bg-primary text-white shadow-lg"
+                          : "border-2 border-gray-300 hover:border-primary bg-white"
+                      }`}
+                      onClick={() => setGroupSize(group.value)}
+                    >
+                      <i className={`fas fa-${group.icon} mr-2`}></i>
+                      {group.label}
+                    </Button>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="mb-8"
+            >
+              <h3 className="font-heading font-medium text-lg mb-4 flex items-center gap-2">
+                <i className="fas fa-magic text-primary"></i>
+                What vibe are you going for?
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { value: "Relaxed", icon: "spa", color: "emerald" },
+                  { value: "Energetic", icon: "bolt", color: "amber" },
+                  { value: "Romantic", icon: "heart", color: "rose" },
+                  { value: "Adventurous", icon: "hiking", color: "orange" },
+                  { value: "Cultural", icon: "landmark", color: "purple" },
+                  { value: "Foodie", icon: "utensils", color: "green" },
+                  { value: "Social", icon: "comments", color: "blue" },
+                  { value: "Peaceful", icon: "dove", color: "cyan" }
+                ].map((mood) => (
+                  <motion.div
+                    key={mood.value}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      variant={formData.mood.includes(mood.value) ? "default" : "outline"}
+                      className={`rounded-xl font-medium transition-all duration-200 ${
+                        formData.mood.includes(mood.value)
+                          ? `bg-${mood.color}-500 text-white shadow-lg`
+                          : "border-2 border-gray-300 hover:border-primary bg-white"
+                      }`}
+                      onClick={() => toggleMood(mood.value)}
+                    >
+                      <i className={`fas fa-${mood.icon} mr-2`}></i>
+                      {mood.value}
+                    </Button>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
             
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -193,7 +294,7 @@ export default function Questionnaire() {
                 <Button
                   onClick={handleNext}
                   className="bg-primary hover:bg-[#FF6B85] text-white font-medium py-4 px-10 rounded-xl shadow-lg text-lg relative overflow-hidden group"
-                  disabled={formData.hangoutTypes.length === 0}
+                  disabled={formData.hangoutTypes.length === 0 || formData.mood.length === 0 || !formData.groupSize}
                 >
                   <span className="relative z-10">
                     Next <i className="fas fa-arrow-right ml-2"></i>

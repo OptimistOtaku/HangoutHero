@@ -56,6 +56,22 @@ export default function Location() {
       // Redirect back to questionnaire if no preference data exists
       window.location.href = "/questionnaire";
     }
+
+    // Get user's current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          console.log("Got user location:", position.coords.latitude, position.coords.longitude);
+          sessionStorage.setItem('userCoords', JSON.stringify({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }));
+        },
+        (error) => {
+          console.log("Geolocation error:", error);
+        }
+      );
+    }
   }, []);
 
   const handleBack = () => {

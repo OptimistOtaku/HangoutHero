@@ -13,7 +13,9 @@ const genAI = new GoogleGenerativeAI(
 const preferenceSchema = z.object({
   hangoutTypes: z.array(z.string()),
   duration: z.string(),
-  budget: z.string()
+  budget: z.string(),
+  groupSize: z.string().optional(),
+  mood: z.array(z.string()).optional()
 });
 
 const locationSchema = z.object({
@@ -67,8 +69,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Generating itinerary for", locationData.location);
       
-      // Initialize itinerary data
-      let itineraryData: ItineraryResponse;
+      // Initialize itinerary data with default
+      let itineraryData: ItineraryResponse = {
+        title: "Your Adventure",
+        description: "A personalized itinerary just for you.",
+        location: locationData.location,
+        activities: [],
+        recommendations: []
+      };
       let useGemini = true;
       
       // Try to use Gemini first
@@ -76,6 +84,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Attempting to use Gemini for personalized itinerary...");
         
         // Prepare the prompt for Gemini
+        const groupSize = preferences.groupSize || "Solo";
+        const moods = preferences.mood?.length ? preferences.mood.join(", ") : "Relaxed";
+
         const prompt = `You are an expert travel planner with deep knowledge of Indian locations. You create detailed, realistic itineraries based on user preferences.
 
 Generate a personalized hangout itinerary for ${locationData.location}.
@@ -84,12 +95,22 @@ Preferences:
 - Activities: ${preferences.hangoutTypes.join(", ")}
 - Duration: ${preferences.duration}
 - Budget: ${preferences.budget}
+- Group Size: ${groupSize}
+- Vibe/Mood: ${moods}
 - Maximum travel distance: ${locationData.distance}
 - Transportation: ${locationData.transportation.join(", ")}
 
-Please generate a complete itinerary with realistic locations, descriptions, and timeline. 
+IMPORTANT: Tailor the itinerary to the GROUP SIZE and VIBE/MOOD:
+- For "Solo": Focus on safe, welcoming places good for solo travelers
+- For "Couple": Include romantic, intimate spots perfect for two
+- For "Small Group" (3-5): Balance activities that work well for groups but aren't too crowded
+- For "Large Group" (6+): Focus on spacious venues, group-friendly spots, easy logistics
+
+Match the activities to the VIBE/MOOD selected - if "Romantic", prioritize couples activities; if "Adventurous", prioritize active/exciting options; if "Foodie", prioritize culinary experiences; etc.
+
+Please generate a complete itinerary with realistic locations, descriptions, and timeline.
 The response must be valid JSON format only (no markdown, no code blocks) and include:
-1. A title and description for the itinerary
+1. A title and description for the itinerary that reflects the vibe and group size
 2. The location
 3. A list of 6 activities (2 morning, 2 afternoon, 2 evening) with:
    - Unique ID (string)
@@ -153,9 +174,114 @@ Return only valid JSON without any markdown formatting or code blocks.`;
       // If Gemini API failed or reached rate limit, use pre-configured data
       if (!useGemini) {
         console.log("Using pre-configured itinerary data for", locationData.location);
-        
-        // Create itineraries for different locations
+
+        // Create itineraries for different locations - Delhi is default
         const itineraries: Record<string, ItineraryResponse> = {
+          "Default": {
+            title: `${preferences.duration} Adventure in ${locationData.location}`,
+            description: `Enjoy a ${preferences.budget.toLowerCase()} itinerary exploring the best of ${locationData.location} with a focus on ${preferences.hangoutTypes.join(", ").toLowerCase()}.`,
+            location: locationData.location,
+            activities: [
+              {
+                id: "act1",
+                time: "9:00 AM",
+                title: `Morning Exploration in ${locationData.location}`,
+                description: "Start your day with a relaxing morning exploring local attractions and getting a feel for the area.",
+                location: `${locationData.location} City Center`,
+                image: getRandomImageForCategory("cafe atmosphere"),
+                price: "₹",
+                rating: "4.5 ★",
+                timeOfDay: "morning",
+                type: "exploring"
+              },
+              {
+                id: "act2",
+                time: "11:00 AM",
+                title: "Local Cafe Experience",
+                description: "Enjoy a coffee break at a popular local cafe known for its ambiance.",
+                location: `${locationData.location} Main Street`,
+                image: getRandomImageForCategory("cafe atmosphere"),
+                price: "₹",
+                rating: "4.6 ★",
+                timeOfDay: "morning",
+                type: "cafe"
+              },
+              {
+                id: "act3",
+                time: "1:30 PM",
+                title: "Lunch at Local Favorite",
+                description: "Savor delicious local cuisine at a well-reviewed restaurant.",
+                location: `${locationData.location} Food District`,
+                image: getRandomImageForCategory("restaurant dining"),
+                price: "₹₹",
+                rating: "4.7 ★",
+                timeOfDay: "afternoon",
+                type: "eating"
+              },
+              {
+                id: "act4",
+                time: "3:30 PM",
+                title: "City Walking Tour",
+                description: "Explore the local culture and hidden gems on a self-guided walking tour.",
+                location: `${locationData.location} Downtown`,
+                image: getRandomImageForCategory("city exploration"),
+                price: "Free",
+                rating: "4.5 ★",
+                timeOfDay: "afternoon",
+                type: "exploring"
+              },
+              {
+                id: "act5",
+                time: "6:30 PM",
+                title: "Sunset Viewpoint",
+                description: "End your day with beautiful sunset views at a scenic location.",
+                location: `${locationData.location} Viewpoint`,
+                image: getRandomImageForCategory("city exploration"),
+                price: "Free",
+                rating: "4.8 ★",
+                timeOfDay: "evening",
+                type: "exploring"
+              },
+              {
+                id: "act6",
+                time: "8:00 PM",
+                title: "Dinner and Relaxation",
+                description: "Conclude with a satisfying dinner at a popular local restaurant.",
+                location: `${locationData.location} Restaurant Row`,
+                image: getRandomImageForCategory("restaurant dining"),
+                price: "₹₹",
+                rating: "4.6 ★",
+                timeOfDay: "evening",
+                type: "eating"
+              }
+            ],
+            recommendations: [
+              {
+                id: "rec1",
+                title: "Historical Sites Tour",
+                description: "Explore the historical landmarks and cultural heritage of the area.",
+                image: getRandomImageForCategory("historical landmarks"),
+                rating: "4.7 ★",
+                duration: "Half day"
+              },
+              {
+                id: "rec2",
+                title: "Local Food Experience",
+                description: "Discover the best local cuisine through guided food tours.",
+                image: getRandomImageForCategory("restaurant dining"),
+                rating: "4.8 ★",
+                duration: "3-4 hours"
+              },
+              {
+                id: "rec3",
+                title: "Adventure Activities",
+                description: "Experience thrilling outdoor activities and adventures nearby.",
+                image: getRandomImageForCategory("people enjoying outings"),
+                rating: "4.6 ★",
+                duration: "Full day"
+              }
+            ]
+          },
           "Delhi": {
             title: `${preferences.duration} Adventure in Delhi`,
             description: `Enjoy a ${preferences.budget.toLowerCase()} itinerary exploring the best of Delhi with a focus on ${preferences.hangoutTypes.join(", ").toLowerCase()}.`,
@@ -579,8 +705,8 @@ Return only valid JSON without any markdown formatting or code blocks.`;
         };
 
         // Select the appropriate itinerary based on location
-        let locationToUse = "Delhi";
-        
+        let locationToUse = "Default";
+
         // Match location against our available itineraries
         if (locationData.location.toLowerCase().includes("delhi")) {
           locationToUse = "Delhi";
@@ -591,7 +717,7 @@ Return only valid JSON without any markdown formatting or code blocks.`;
         } else if (locationData.location.toLowerCase().includes("mussoorie")) {
           locationToUse = "Mussoorie";
         }
-        
+
         itineraryData = itineraries[locationToUse];
       }
       

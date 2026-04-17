@@ -5,6 +5,8 @@ export interface PreferenceFormData {
   hangoutTypes: string[];
   duration: string;
   budget: string;
+  groupSize: string;
+  mood: string[];
 }
 
 export interface LocationFormData {

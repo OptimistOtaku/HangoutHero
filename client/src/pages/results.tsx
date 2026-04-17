@@ -7,7 +7,8 @@ import { ItineraryTimeline } from "@/components/ui/itinerary-timeline";
 import { RecommendationCard } from "@/components/ui/recommendation-card";
 import { useToast } from "@/hooks/use-toast";
 import { ItineraryResponse, saveItinerary } from "@/lib/openai";
-import { ScrapbookImage } from "@/components/ui/scrapbook-image";
+import { GoogleMap } from "@/components/ui/google-map";
+import { WeatherWidget } from "@/components/ui/weather-widget";
 import { motion } from "framer-motion";
 
 export default function Results() {
@@ -129,13 +130,16 @@ export default function Results() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6"
+                className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4"
               >
-                <div>
+                <div className="flex-1">
                   <h2 className="text-3xl md:text-4xl font-heading font-bold mb-2 bg-gradient-to-r from-primary to-pink-500 bg-clip-text text-transparent">
                     {itinerary.title}
                   </h2>
                   <p className="text-gray-700 text-lg">{itinerary.description}</p>
+                </div>
+                <div className="w-full md:w-64">
+                  <WeatherWidget location={itinerary.location} />
                 </div>
                 <div className="flex flex-wrap gap-2 mt-4 md:mt-0">
                   <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -189,23 +193,21 @@ export default function Results() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5 }}
-                className="h-72 md:h-96 w-full rounded-xl overflow-hidden mb-8 bg-gray-100 relative border-4 border-white shadow-xl"
+                className="rounded-xl overflow-hidden mb-8 bg-gray-100 relative border-4 border-white shadow-xl"
                 style={{
                   boxShadow: "0 12px 40px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(255,255,255,0.3)",
                 }}
               >
-                <ScrapbookImage
-                  src={`https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/pin-s+FF385C(${itinerary.location})/${itinerary.location},13,0,0/800x400@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw`}
-                  alt={`Map of ${itinerary.location} with itinerary points`}
-                  className="w-full h-full"
-                  fallback="https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=600"
+                <GoogleMap
+                  activities={itinerary.activities}
+                  location={itinerary.location}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm py-3 px-5 rounded-xl shadow-lg border-2 border-amber-200/50"
+                  className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm py-3 px-5 rounded-xl shadow-lg border-2 border-amber-200/50 z-10"
                 >
                   <div className="flex items-center gap-2">
                     <i className="fas fa-map-marker-alt text-primary text-xl"></i>
@@ -213,7 +215,7 @@ export default function Results() {
                   </div>
                 </motion.div>
                 {/* Scrapbook decoration */}
-                <div className="absolute top-4 right-4 w-10 h-6 bg-yellow-200/90 rotate-12 shadow-md opacity-80"></div>
+                <div className="absolute top-4 right-4 w-10 h-6 bg-yellow-200/90 rotate-12 shadow-md opacity-80 z-10"></div>
               </motion.div>
               
               {/* Timeline view */}
