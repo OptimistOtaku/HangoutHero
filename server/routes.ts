@@ -1,13 +1,8 @@
-import type { Express, Request, Response, NextFunction } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// Initialize Gemini API client
-const genAI = new GoogleGenerativeAI(
-  process.env.GEMINI_API_KEY || "AIzaSyAJUNmvY8b81BxN61kpaVu8TfGAl93yteo"
-);
 
 // Validation schemas
 const preferenceSchema = z.object({
@@ -61,6 +56,57 @@ interface ItineraryResponse {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.get("/api/weather", async (req: Request, res: Response) => {
+    const location = String(req.query.location || "").trim();
+
+    if (!location) {
+      return res.status(400).json({ message: "Location is required" });
+    }
+
+    try {
+      const geocodeResponse = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`
+      );
+
+      if (!geocodeResponse.ok) {
+        throw new Error("Failed to geocode location");
+      }
+
+      const geocodeData = await geocodeResponse.json();
+      const match = geocodeData.results?.[0];
+
+      if (!match) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+
+      const forecastResponse = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${match.latitude}&longitude=${match.longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&wind_speed_unit=kmh&timezone=auto`
+      );
+
+      if (!forecastResponse.ok) {
+        throw new Error("Failed to fetch weather");
+      }
+
+      const forecastData = await forecastResponse.json();
+      const current = forecastData.current;
+
+      res.json({
+        locationName: [match.name, match.admin1, match.country].filter(Boolean).join(", "),
+        main: {
+          temp: current.temperature_2m,
+          humidity: current.relative_humidity_2m,
+        },
+        wind: {
+          speed: current.wind_speed_10m,
+        },
+        weather: getWeatherDetails(current.weather_code),
+      });
+    } catch (error) {
+      console.error("Error fetching weather:", error);
+      res.status(500).json({ message: "Failed to fetch weather" });
+    }
+  });
+
   // API endpoint to generate an itinerary
   app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
     try {
@@ -77,10 +123,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activities: [],
         recommendations: []
       };
-      let useGemini = true;
+      let useGemini = Boolean(process.env.GEMINI_API_KEY);
       
-      // Try to use Gemini first
+      // Try to use Gemini first when a valid API key is configured
       try {
+        if (!process.env.GEMINI_API_KEY) {
+          throw new Error("GEMINI_API_KEY is not configured");
+        }
+
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         console.log("Attempting to use Gemini for personalized itinerary...");
         
         // Prepare the prompt for Gemini
@@ -132,9 +183,9 @@ Return only valid JSON without any markdown formatting or code blocks.`;
 
         // Get the Gemini model with JSON response format
         const model = genAI.getGenerativeModel({ 
-          model: "gemini-1.5-pro",
+          model: "gemini-2.5-flash",
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.8,
             responseMimeType: "application/json",
           }
         });
@@ -144,27 +195,12 @@ Return only valid JSON without any markdown formatting or code blocks.`;
         const response = await result.response;
         const responseText = response.text();
 
-        // Parse the response
-        const generatedData = JSON.parse(responseText);
-        
-        // Add image URLs to activities based on their type
-        if (generatedData.activities && Array.isArray(generatedData.activities)) {
-          generatedData.activities = generatedData.activities.map((activity: any) => ({
-            ...activity,
-            image: activity.image || getRandomImageForCategory(activity.type || "cafe")
-          }));
-        }
-        
-        // Add image URLs to recommendations
-        if (generatedData.recommendations && Array.isArray(generatedData.recommendations)) {
-          generatedData.recommendations = generatedData.recommendations.map((rec: any) => ({
-            ...rec,
-            image: rec.image || getRandomImageForCategory("historical landmarks")
-          }));
-        }
-        
-        itineraryData = generatedData;
-        console.log("Successfully generated personalized itinerary using Gemini AI");
+        itineraryData = normalizeGeneratedItinerary(
+          JSON.parse(responseText),
+          preferences,
+          locationData
+        );
+        console.log("Successfully generated personalized itinerary using Gemini 2.5 Flash");
         
       } catch (apiError) {
         console.log("Gemini API error, using fallback data:", apiError);
@@ -852,6 +888,144 @@ Return only valid JSON without any markdown formatting or code blocks.`;
 }
 
 // Helper function to get random images for each category
+function normalizeGeneratedItinerary(
+  generatedData: any,
+  preferences: z.infer<typeof preferenceSchema>,
+  locationData: z.infer<typeof locationSchema>
+): ItineraryResponse {
+  const activities = Array.isArray(generatedData.activities)
+    ? generatedData.activities.slice(0, 6).map((activity: any, index: number) => {
+        const type = normalizeActivityType(activity.type);
+        const timeOfDay = normalizeTimeOfDay(
+          activity.timeOfDay || activity.time_of_day_category || activity.time_of_day,
+          index
+        );
+
+        return {
+          id: String(activity.id || `activity-${index + 1}`),
+          time: String(activity.time || defaultTimeForIndex(index)),
+          title: String(activity.title || `Stop ${index + 1}`),
+          description: String(activity.description || "A selected stop for your itinerary."),
+          location: String(activity.location || locationData.location),
+          image: String(activity.image || getRandomImageForCategory(categoryForActivityType(type))),
+          price: String(activity.price || activity.price_category || activity.priceCategory || "₹₹"),
+          rating: String(activity.rating || "4.6 ★"),
+          timeOfDay,
+          type,
+        };
+      })
+    : [];
+
+  const recommendationsSource =
+    generatedData.recommendations ||
+    generatedData.recommended_similar_adventures ||
+    generatedData.recommendedSimilarAdventures ||
+    generatedData.similar_adventures ||
+    [];
+
+  const recommendations = Array.isArray(recommendationsSource)
+    ? recommendationsSource.slice(0, 3).map((rec: any, index: number) => ({
+        id: String(rec.id || `recommendation-${index + 1}`),
+        title: String(rec.title || `More ${locationData.location} ideas`),
+        description: String(rec.description || "A related plan based on your selected mood and city."),
+        image: String(rec.image || getRandomImageForCategory("historical landmarks")),
+        rating: String(rec.rating || "4.7 ★"),
+        duration: String(rec.duration || preferences.duration),
+      }))
+    : [];
+
+  return {
+    title: String(generatedData.title || `${preferences.duration} in ${locationData.location}`),
+    description: String(
+      generatedData.description ||
+        `A ${preferences.budget.toLowerCase()} itinerary shaped around ${preferences.hangoutTypes.join(", ").toLowerCase()}.`
+    ),
+    location: String(generatedData.location || locationData.location),
+    activities,
+    recommendations: recommendations.length > 0
+      ? recommendations
+      : buildFallbackRecommendations(locationData.location, preferences.duration),
+  };
+}
+
+function normalizeActivityType(type: unknown): string {
+  const normalized = String(type || "").toLowerCase();
+
+  if (["exploring", "eating", "historical", "cafe"].includes(normalized)) {
+    return normalized;
+  }
+
+  if (normalized.includes("food") || normalized.includes("restaurant")) {
+    return "eating";
+  }
+
+  if (normalized.includes("history") || normalized.includes("heritage")) {
+    return "historical";
+  }
+
+  if (normalized.includes("coffee") || normalized.includes("cafe")) {
+    return "cafe";
+  }
+
+  return "exploring";
+}
+
+function normalizeTimeOfDay(value: unknown, index: number): "morning" | "afternoon" | "evening" {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized.includes("morning")) return "morning";
+  if (normalized.includes("afternoon")) return "afternoon";
+  if (normalized.includes("evening")) return "evening";
+
+  if (index < 2) return "morning";
+  if (index < 4) return "afternoon";
+  return "evening";
+}
+
+function defaultTimeForIndex(index: number): string {
+  return ["9:00 AM", "11:00 AM", "1:30 PM", "3:30 PM", "6:00 PM", "8:00 PM"][index] || "10:00 AM";
+}
+
+function categoryForActivityType(type: string): string {
+  const categoryMap: Record<string, string> = {
+    cafe: "cafe atmosphere",
+    eating: "restaurant dining",
+    exploring: "city exploration",
+    historical: "historical landmarks",
+  };
+
+  return categoryMap[type] || "city exploration";
+}
+
+function buildFallbackRecommendations(location: string, duration: string): Recommendation[] {
+  return [
+    {
+      id: "rec-gemini-1",
+      title: `${location} Heritage Walk`,
+      description: "A slower route through landmark streets, old neighborhoods, and memorable local stops.",
+      image: getRandomImageForCategory("historical landmarks"),
+      rating: "4.7 ★",
+      duration,
+    },
+    {
+      id: "rec-gemini-2",
+      title: `${location} Food Trail`,
+      description: "A compact plan built around popular local eateries, cafe breaks, and easy transit.",
+      image: getRandomImageForCategory("restaurant dining"),
+      rating: "4.8 ★",
+      duration: "3-4 hours",
+    },
+    {
+      id: "rec-gemini-3",
+      title: `${location} Easygoing City Edit`,
+      description: "A relaxed set of scenic stops and low-pressure places for a casual day out.",
+      image: getRandomImageForCategory("city exploration"),
+      rating: "4.6 ★",
+      duration: "Half day",
+    },
+  ];
+}
+
 function getRandomImageForCategory(category: string): string {
   const categoryImages: Record<string, string[]> = {
     "cafe atmosphere": [
@@ -886,4 +1060,36 @@ function getRandomImageForCategory(category: string): string {
   
   // Return a random image from the category
   return images[Math.floor(Math.random() * images.length)];
+}
+
+function getWeatherDetails(code: number): { condition: string; icon: "sun" | "cloud" | "drizzle" | "rain" | "storm" | "snow" | "fog" } {
+  if (code === 0) {
+    return { condition: "Clear", icon: "sun" };
+  }
+
+  if ([1, 2, 3].includes(code)) {
+    return { condition: "Partly cloudy", icon: "cloud" };
+  }
+
+  if ([45, 48].includes(code)) {
+    return { condition: "Foggy", icon: "fog" };
+  }
+
+  if ([51, 53, 55, 56, 57].includes(code)) {
+    return { condition: "Drizzle", icon: "drizzle" };
+  }
+
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) {
+    return { condition: "Rain", icon: "rain" };
+  }
+
+  if ([71, 73, 75, 77, 85, 86].includes(code)) {
+    return { condition: "Snow", icon: "snow" };
+  }
+
+  if ([95, 96, 99].includes(code)) {
+    return { condition: "Thunderstorm", icon: "storm" };
+  }
+
+  return { condition: "Cloudy", icon: "cloud" };
 }

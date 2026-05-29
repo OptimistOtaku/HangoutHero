@@ -3,67 +3,45 @@ import { Button } from "@/components/ui/button";
 
 export default function Footer() {
   return (
-    <footer className="bg-gradient-to-br from-amber-50 to-pink-50 border-t-4 border-amber-200/50 mt-12 relative overflow-hidden">
-      {/* Scrapbook decorative elements */}
-      <div className="absolute top-0 left-1/4 w-24 h-24 bg-yellow-200/20 rotate-12 transform -translate-y-8"></div>
-      <div className="absolute bottom-0 right-1/4 w-20 h-20 bg-pink-200/20 -rotate-12 transform translate-y-4"></div>
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          <div>
-            <h3 className="font-heading font-bold text-lg mb-4">About</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">How it works</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Our story</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Blog</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Press</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-heading font-bold text-lg mb-4">Destinations</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Delhi</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Noida</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Jaipur</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Mussoorie</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-heading font-bold text-lg mb-4">Support</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Help Center</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Contact us</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-gray-700 hover:text-primary transition-colors">Terms of Service</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-heading font-bold text-lg mb-4">Join Us</h3>
-            <p className="text-gray-700 mb-4">Get personalized recommendations and updates.</p>
-            <div className="flex">
-              <Input
-                type="email"
-                placeholder="Your email"
-                className="border border-gray-300 rounded-l-lg focus:border-primary"
-              />
-              <Button className="bg-primary hover:bg-[#FF6B85] text-white rounded-l-none">
-                <i className="fas fa-arrow-right"></i>
-              </Button>
-            </div>
-            <div className="flex space-x-4 mt-6">
-              <a href="#" className="text-gray-700 hover:text-primary transition-colors"><i className="fab fa-instagram text-xl"></i></a>
-              <a href="#" className="text-gray-700 hover:text-primary transition-colors"><i className="fab fa-twitter text-xl"></i></a>
-              <a href="#" className="text-gray-700 hover:text-primary transition-colors"><i className="fab fa-facebook text-xl"></i></a>
-              <a href="#" className="text-gray-700 hover:text-primary transition-colors"><i className="fab fa-pinterest text-xl"></i></a>
-            </div>
-          </div>
-        </div>
-        <div className="mt-12 pt-8 border-t-2 border-amber-200/50 text-center text-gray-700 relative">
-          <p className="relative inline-block">
-            © {new Date().getFullYear()} <span className="font-heading font-bold text-primary">HangoutHero</span>. All rights reserved.
-            <span className="absolute -bottom-1 left-0 right-0 h-1 bg-yellow-200/40 transform -skew-x-12"></span>
+    <footer className="border-t border-[rgba(244,208,63,0.4)] bg-[rgba(255,250,242,0.76)] px-4 pb-10 pt-14 md:px-8">
+      <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_0.95fr]">
+        <div>
+          <p className="font-heading text-4xl font-extrabold text-[#111318]">HangoutHero</p>
+          <p className="font-scrap mt-1 text-3xl leading-none text-primary">city plans that feel collected</p>
+          <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">
+            A brighter way to plan spontaneous outings: mood-led itineraries, practical pacing, and scrapbook energy from start to finish.
           </p>
+          <div className="mt-6 flex flex-wrap gap-6 text-sm font-semibold uppercase text-slate-500">
+            <span>AI itineraries</span>
+            <span>Indian cities</span>
+            <span>Live weather</span>
+            <span>Shareable routes</span>
+          </div>
         </div>
+
+        <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white/82 p-6 shadow-[0_18px_44px_rgba(255,56,92,0.06)]">
+          <p className="label-chip">Postcard list</p>
+          <h3 className="mt-5 font-heading text-3xl font-extrabold leading-none text-[#111318]">
+            Get new itinerary ideas first.
+          </h3>
+          <p className="mt-3 text-base leading-7 text-slate-600">
+            Fresh destination edits, visual route ideas, and product updates without the noise.
+          </p>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <Input
+              type="email"
+              placeholder="Your email"
+              className="h-12 rounded-full border-slate-300 bg-white"
+            />
+            <Button className="h-12 rounded-full bg-primary px-6 text-base font-bold text-white hover:bg-[#ff5977]">
+              Subscribe
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto mt-10 max-w-7xl text-sm text-slate-500">
+        {new Date().getFullYear()} HangoutHero. All rights reserved.
       </div>
     </footer>
   );

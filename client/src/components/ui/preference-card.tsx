@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Check, Coffee, Compass, Landmark, Utensils } from "lucide-react";
 
 interface PreferenceCardProps {
   title: string;
@@ -9,74 +10,61 @@ interface PreferenceCardProps {
   onClick: () => void;
 }
 
-export function PreferenceCard({ 
-  title, 
-  description, 
-  icon, 
-  color, 
+export function PreferenceCard({
+  title,
+  description,
+  icon,
+  color,
   selected,
-  onClick 
+  onClick
 }: PreferenceCardProps) {
-  // Map color string to actual Tailwind class
+  const iconMap: Record<string, typeof Compass> = {
+    coffee: Coffee,
+    compass: Compass,
+    landmark: Landmark,
+    utensils: Utensils,
+  };
   const colorMap: Record<string, string> = {
-    'primary': 'bg-primary',
-    'primary-light': 'bg-[#FF6B85]',
-    'secondary': 'bg-secondary',
-    'accent': 'bg-accent',
-    'decorative': 'bg-[#A78BFA]'
+    primary: "bg-primary",
+    "primary-light": "bg-[#ff6b85]",
+    secondary: "bg-[#47bfa3]",
+    accent: "bg-accent",
+    decorative: "bg-[#8f7cff]"
   };
 
-  const bgColorClass = colorMap[color] || 'bg-primary';
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+    <motion.button
+      type="button"
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02, y: -4 }}
-      whileTap={{ scale: 0.98 }}
-      className={`preference-card cursor-pointer border-4 ${
-        selected 
-          ? 'border-primary bg-primary/5 shadow-lg ring-4 ring-primary/20' 
-          : 'border-gray-200 hover:border-primary/50 bg-white'
-      } rounded-2xl p-6 flex items-start space-x-4 transition-all duration-300 relative overflow-hidden group`}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.99 }}
       onClick={onClick}
-      style={{
-        boxShadow: selected 
-          ? "0 8px 32px rgba(255, 56, 92, 0.2), inset 0 0 0 1px rgba(255,255,255,0.3)"
-          : "0 4px 16px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.5)",
-      }}
+      className={`relative w-full overflow-hidden rounded-3xl border p-6 text-left transition-all ${
+        selected
+          ? "border-primary bg-[rgba(255,56,92,0.06)] shadow-[0_18px_38px_rgba(255,56,92,0.12)]"
+          : "border-[rgba(244,208,63,0.4)] bg-white shadow-[0_10px_24px_rgba(16,24,40,0.04)] hover:border-primary/40"
+      }`}
     >
-      {/* Selected indicator */}
+      <div className="absolute left-4 top-3 h-4 w-10 rotate-[-10deg] rounded-sm bg-[#fff09b]" />
       {selected && (
-        <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          className="absolute top-4 right-4 w-6 h-6 bg-primary rounded-full flex items-center justify-center"
-        >
-          <i className="fas fa-check text-white text-xs"></i>
-        </motion.div>
+        <div className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs text-white">
+          <Check className="h-4 w-4" />
+        </div>
       )}
-      
-      {/* Scrapbook tape decoration */}
-      <div className="absolute top-2 left-2 w-8 h-4 bg-yellow-200/70 rotate-[-12deg] shadow-sm opacity-60"></div>
-      
-      <motion.div
-        className={`w-14 h-14 ${bgColorClass} rounded-xl flex items-center justify-center shadow-md`}
-        animate={{ 
-          scale: selected ? 1.1 : 1,
-          rotate: selected ? [0, -5, 5, -5, 0] : 0
-        }}
-        transition={{ duration: 0.3 }}
-      >
-        <i className={`fas fa-${icon} text-white text-2xl`}></i>
-      </motion.div>
-      <div className="flex-1">
-        <h3 className="font-heading font-bold text-xl mb-2 text-gray-800">{title}</h3>
-        <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
+
+      <div className="relative flex items-start gap-4">
+        <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-md ${colorMap[color] || "bg-primary"}`}>
+          {(() => {
+            const Icon = iconMap[icon] || Compass;
+            return <Icon className="h-6 w-6" />;
+          })()}
+        </div>
+        <div>
+          <h3 className="font-heading text-2xl leading-none text-[#111318]">{title}</h3>
+          <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+        </div>
       </div>
-      
-      {/* Hover effect overlay */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${bgColorClass}/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl`}></div>
-    </motion.div>
+    </motion.button>
   );
 }

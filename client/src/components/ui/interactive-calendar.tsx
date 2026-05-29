@@ -3,12 +3,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Calendar } from "./calendar";
 import { Button } from "./button";
 import { Card } from "./card";
+import { ArrowRight, CalendarCheck, ChevronDown, ChevronUp } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface InteractiveCalendarProps {
   onDateSelect?: (date: Date | undefined) => void;
 }
 
 export function InteractiveCalendar({ onDateSelect }: InteractiveCalendarProps) {
+  const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -70,7 +73,7 @@ export function InteractiveCalendar({ onDateSelect }: InteractiveCalendarProps) 
             onClick={() => setIsExpanded(!isExpanded)}
             className="text-primary hover:text-[#FF6B85]"
           >
-            <i className={`fas fa-${isExpanded ? "chevron-up" : "chevron-down"} mr-2`}></i>
+            {isExpanded ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
             {isExpanded ? "Collapse" : "Expand"}
           </Button>
         </div>
@@ -89,7 +92,7 @@ export function InteractiveCalendar({ onDateSelect }: InteractiveCalendarProps) 
               </p>
             </div>
             <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-              <i className="fas fa-calendar-check text-primary text-xl"></i>
+              <CalendarCheck className="h-5 w-5 text-primary" />
             </div>
           </div>
         </motion.div>
@@ -152,13 +155,13 @@ export function InteractiveCalendar({ onDateSelect }: InteractiveCalendarProps) 
           <Button
             onClick={() => {
               if (selectedDate) {
-                window.location.href = "/questionnaire";
+                setLocation("/questionnaire");
               }
             }}
             className="w-full bg-primary hover:bg-[#FF6B85] text-white font-medium py-3 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300"
             disabled={!selectedDate}
           >
-            <i className="fas fa-arrow-right mr-2"></i>
+            <ArrowRight className="mr-2 h-4 w-4" />
             Start Planning for {selectedDate ? selectedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Selected Date"}
           </Button>
         </motion.div>

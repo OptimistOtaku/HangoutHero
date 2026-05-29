@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProgressSteps } from "@/components/ui/progress-steps";
-import { PreferenceFormData, LocationFormData } from "@/lib/openai";
+import { LocationFormData } from "@/lib/openai";
 import { ScrapbookImage } from "@/components/ui/scrapbook-image";
 import { motion } from "framer-motion";
+import { CITY_CARDS } from "@/lib/city-data";
+import { useLocation } from "wouter";
 
 interface LocationOption {
   name: string;
@@ -15,202 +16,121 @@ interface LocationOption {
   selected: boolean;
 }
 
+const defaultLocationData: LocationFormData = {
+  location: "Delhi",
+  distance: "Moderate (up to 5 miles)",
+  transportation: ["Walking", "Public Transit"]
+};
+
+const baseLocations: LocationOption[] = CITY_CARDS.slice(0, 4).map((city, index) => ({
+  name: city.name,
+  image: city.image,
+  selected: index === 0,
+}));
+
 export default function Location() {
-  const [locationData, setLocationData] = useState<LocationFormData>({
-    location: "Delhi",
-    distance: "Moderate (up to 5 miles)",
-    transportation: ["Walking", "Public Transit"]
-  });
-  
-  const [preferenceData, setPreferenceData] = useState<PreferenceFormData | null>(null);
-  
-  const [locations, setLocations] = useState<LocationOption[]>([
-    { 
-      name: "Delhi", 
-      image: "https://images.unsplash.com/photo-1587474260584-136574528ed5?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250", 
-      selected: true 
-    },
-    { 
-      name: "Noida", 
-      image: "https://images.unsplash.com/photo-1601961405399-801fb1936fc3?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250", 
-      selected: false 
-    },
-    { 
-      name: "Jaipur", 
-      image: "https://images.unsplash.com/photo-1599661046289-e31897846e41?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250", 
-      selected: false 
-    },
-    { 
-      name: "Mussoorie", 
-      image: "https://images.unsplash.com/photo-1591017683656-4322564dde48?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250", 
-      selected: false 
-    }
-  ]);
+  const [, setRoute] = useLocation();
+  const [locationData, setLocationData] = useState<LocationFormData>(defaultLocationData);
+  const [locations, setLocations] = useState<LocationOption[]>(baseLocations);
 
   useEffect(() => {
-    // Retrieve preference data from session storage
-    const savedPrefs = sessionStorage.getItem('preferenceData');
-    if (savedPrefs) {
-      setPreferenceData(JSON.parse(savedPrefs));
-    } else {
-      // Redirect back to questionnaire if no preference data exists
-      window.location.href = "/questionnaire";
+    const savedPrefs = sessionStorage.getItem("preferenceData");
+    const savedLocationData = sessionStorage.getItem("locationData");
+
+    if (!savedPrefs) {
+      setRoute("/questionnaire");
+      return;
     }
 
-    // Get user's current location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          console.log("Got user location:", position.coords.latitude, position.coords.longitude);
-          sessionStorage.setItem('userCoords', JSON.stringify({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }));
-        },
-        (error) => {
-          console.log("Geolocation error:", error);
-        }
+    if (savedLocationData) {
+      const parsedLocationData: LocationFormData = JSON.parse(savedLocationData);
+      setLocationData(parsedLocationData);
+      setLocations(
+        baseLocations.map((loc) => ({
+          ...loc,
+          selected: loc.name.toLowerCase() === parsedLocationData.location.toLowerCase(),
+        }))
       );
     }
   }, []);
 
-  const handleBack = () => {
-    window.location.href = "/questionnaire";
-  };
-
   const handleGenerate = () => {
-    // Save location data to session storage
-    sessionStorage.setItem('locationData', JSON.stringify(locationData));
-    window.location.href = "/loading";
-  };
-
-  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocationData(prev => ({ ...prev, location: e.target.value }));
-  };
-
-  const handleDistanceChange = (value: string) => {
-    setLocationData(prev => ({ ...prev, distance: value }));
-  };
-
-  const toggleTransportation = (type: string) => {
-    setLocationData(prev => {
-      const types = [...prev.transportation];
-      const index = types.indexOf(type);
-      
-      if (index >= 0) {
-        types.splice(index, 1);
-      } else {
-        types.push(type);
-      }
-      
-      return { ...prev, transportation: types };
-    });
-  };
-
-  const selectLocation = (name: string) => {
-    // Update the location input and mark the selected location
-    setLocationData(prev => ({ ...prev, location: name }));
-    
-    // Update the locations array to highlight the selected one
-    setLocations(prev => 
-      prev.map(loc => ({
-        ...loc,
-        selected: loc.name === name
-      }))
-    );
+    sessionStorage.setItem("locationData", JSON.stringify(locationData));
+    setRoute("/loading");
   };
 
   return (
-    <section className="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <section className="relative mx-auto max-w-7xl px-4 py-8 md:px-8">
+      <div className="relative mx-auto max-w-5xl">
         <ProgressSteps currentStep={2} />
 
-        <Card className="bg-white rounded-2xl shadow-md mt-8">
-          <CardContent className="p-8">
-            <h2 className="text-3xl font-heading font-bold mb-6">Where would you like to hang out?</h2>
-            <p className="text-gray-700 mb-8">Tell us the city or neighborhood you're interested in exploring.</p>
-            
-            <div className="mb-8">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <i className="fas fa-search text-gray-700"></i>
-                </div>
-                <Input 
-                  type="text" 
-                  placeholder="Enter a city or neighborhood" 
-                  className="w-full border border-gray-300 focus:border-primary rounded-xl py-4 pl-12 pr-4 text-lg" 
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="mt-8"
+        >
+          <Card className="overflow-hidden rounded-3xl border border-[rgba(244,208,63,0.45)] bg-white/85 shadow-[0_24px_60px_rgba(255,56,92,0.08)]">
+            <CardContent className="p-6 md:p-10">
+              <div className="max-w-3xl">
+                <p className="text-sm font-bold uppercase text-primary">Location</p>
+                <h1 className="mt-4 font-heading text-5xl leading-none text-[#111318] md:text-6xl">
+                  Where should this itinerary happen?
+                </h1>
+                <p className="mt-4 text-lg leading-8 text-slate-600">
+                  Choose a city, or type your own area. We’ll keep the plan tuned to travel range and transport.
+                </p>
+              </div>
+
+              <div className="mt-8">
+                <Input
+                  type="text"
+                  placeholder="Enter a city or neighborhood"
+                  className="h-14 rounded-full border-slate-300 bg-white px-6 text-lg"
                   value={locationData.location}
-                  onChange={handleLocationChange}
+                  onChange={(e) => setLocationData((prev) => ({ ...prev, location: e.target.value }))}
                 />
               </div>
-            </div>
-            
-            {/* Popular locations */}
-            <div className="mb-8">
-              <h3 className="font-heading font-medium text-lg mb-4">Popular locations</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+              <div className="mt-8 grid gap-4 md:grid-cols-4">
                 {locations.map((location, index) => (
-                  <motion.div
+                  <motion.button
                     key={location.name}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`cursor-pointer rounded-xl overflow-hidden relative h-32 group border-4 border-white shadow-lg ${
-                      location.selected ? 'border-primary ring-4 ring-primary/20' : ''
-                    }`}
-                    onClick={() => selectLocation(location.name)}
-                    style={{
-                      boxShadow: location.selected 
-                        ? "0 8px 32px rgba(255, 56, 92, 0.3), inset 0 0 0 1px rgba(255,255,255,0.2)"
-                        : "0 4px 16px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.2)",
+                    type="button"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.06 }}
+                    onClick={() => {
+                      setLocationData((prev) => ({ ...prev, location: location.name }));
+                      setLocations((prev) =>
+                        prev.map((item) => ({ ...item, selected: item.name === location.name }))
+                      );
                     }}
+                    className={`group overflow-hidden rounded-3xl border text-left transition-all ${
+                      location.selected
+                        ? "border-primary shadow-[0_18px_38px_rgba(255,56,92,0.14)]"
+                        : "border-[rgba(244,208,63,0.45)] shadow-[0_8px_20px_rgba(16,24,40,0.04)]"
+                    }`}
                   >
-                    <ScrapbookImage
-                      src={location.image}
-                      alt={`${location.name} cityscape`}
-                      className="w-full h-full"
-                      fallback={location.image}
-                    />
-                    <div className={`absolute inset-0 ${
-                      location.selected ? 'bg-primary/40' : 'bg-black/40'
-                    } group-hover:bg-black/30 flex items-center justify-center transition-all duration-300`}>
-                      <motion.span
-                        className="text-white font-heading font-bold text-lg md:text-xl"
-                        animate={{ scale: location.selected ? 1.1 : 1 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {location.name}
-                      </motion.span>
+                    <div className="relative h-40">
+                      <ScrapbookImage src={location.image} alt={location.name} className="h-full w-full" />
+                      <div className={`absolute inset-0 ${location.selected ? "bg-primary/25" : "bg-black/30"} transition-colors group-hover:bg-black/20`} />
+                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                        <p className="font-heading text-3xl leading-none">{location.name}</p>
+                      </div>
                     </div>
-                    {location.selected && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center"
-                      >
-                        <i className="fas fa-check text-white text-xs"></i>
-                      </motion.div>
-                    )}
-                    {/* Scrapbook decoration */}
-                    <div className="absolute top-2 left-2 w-6 h-4 bg-yellow-200/80 rotate-[-15deg] shadow-sm opacity-70"></div>
-                  </motion.div>
+                  </motion.button>
                 ))}
               </div>
-            </div>
-            
-            {/* Additional preferences */}
-            <div className="mb-8">
-              <h3 className="font-heading font-medium text-lg mb-4">Additional preferences</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-gray-700 mb-2">Maximum distance willing to travel</label>
-                  <Select 
+
+              <div className="mt-10 grid gap-6 lg:grid-cols-2">
+                <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-[rgba(255,249,239,0.72)] p-6">
+                  <p className="mb-3 text-sm font-semibold uppercase text-slate-500">Distance</p>
+                  <Select
                     value={locationData.distance}
-                    onValueChange={handleDistanceChange}
+                    onValueChange={(value) => setLocationData((prev) => ({ ...prev, distance: value }))}
                   >
-                    <SelectTrigger className="w-full border border-gray-300 focus:border-primary rounded-xl py-3 px-4">
+                    <SelectTrigger className="h-14 rounded-2xl border-slate-300 bg-white text-base">
                       <SelectValue placeholder="Select distance" />
                     </SelectTrigger>
                     <SelectContent>
@@ -220,59 +140,57 @@ export default function Location() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <label className="block text-gray-700 mb-2">Transportation preferences</label>
+
+                <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white p-6">
+                  <p className="mb-3 text-sm font-semibold uppercase text-slate-500">Transport</p>
                   <div className="flex flex-wrap gap-3">
-                    <Button 
-                      variant={locationData.transportation.includes("Walking") ? "default" : "outline"}
-                      className={`rounded-lg ${locationData.transportation.includes("Walking") ? "bg-primary text-white" : "border-gray-300 hover:border-primary"}`}
-                      onClick={() => toggleTransportation("Walking")}
-                    >
-                      Walking
-                    </Button>
-                    <Button 
-                      variant={locationData.transportation.includes("Public Transit") ? "default" : "outline"}
-                      className={`rounded-lg ${locationData.transportation.includes("Public Transit") ? "bg-primary text-white" : "border-gray-300 hover:border-primary"}`}
-                      onClick={() => toggleTransportation("Public Transit")}
-                    >
-                      Public Transit
-                    </Button>
-                    <Button 
-                      variant={locationData.transportation.includes("Rideshare") ? "default" : "outline"}
-                      className={`rounded-lg ${locationData.transportation.includes("Rideshare") ? "bg-primary text-white" : "border-gray-300 hover:border-primary"}`}
-                      onClick={() => toggleTransportation("Rideshare")}
-                    >
-                      Rideshare
-                    </Button>
-                    <Button 
-                      variant={locationData.transportation.includes("Driving") ? "default" : "outline"}
-                      className={`rounded-lg ${locationData.transportation.includes("Driving") ? "bg-primary text-white" : "border-gray-300 hover:border-primary"}`}
-                      onClick={() => toggleTransportation("Driving")}
-                    >
-                      Driving
-                    </Button>
+                    {["Walking", "Public Transit", "Rideshare", "Driving"].map((type) => {
+                      const active = locationData.transportation.includes(type);
+                      return (
+                        <Button
+                          key={type}
+                          type="button"
+                          variant={active ? "default" : "outline"}
+                          className={`rounded-full px-5 ${
+                            active
+                              ? "bg-primary text-white hover:bg-[#ff5977]"
+                              : "border-slate-300 bg-white text-slate-700 hover:border-primary"
+                          }`}
+                          onClick={() =>
+                            setLocationData((prev) => ({
+                              ...prev,
+                              transportation: active
+                                ? prev.transportation.filter((item) => item !== type)
+                                : [...prev.transportation, type]
+                            }))
+                          }
+                        >
+                          {type}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex justify-between">
-              <Button 
-                variant="outline"
-                className="border border-gray-300 hover:border-primary text-text font-medium py-3 px-8 rounded-xl"
-                onClick={handleBack}
-              >
-                <i className="fas fa-arrow-left mr-2"></i> Back
-              </Button>
-              <Button 
-                className="bg-primary hover:bg-[#FF6B85] text-white font-medium py-3 px-8 rounded-xl"
-                onClick={handleGenerate}
-              >
-                Generate Plan <i className="fas fa-wand-magic-sparkles ml-2"></i>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+
+              <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-between">
+                <Button
+                  variant="outline"
+                  className="h-14 rounded-full border-slate-300 bg-white px-8 text-base font-semibold text-slate-700 hover:border-primary"
+                  onClick={() => setRoute("/questionnaire")}
+                >
+                  Back
+                </Button>
+                <Button
+                  className="h-14 rounded-full bg-primary px-10 text-lg font-bold text-white hover:bg-[#ff5977]"
+                  onClick={handleGenerate}
+                >
+                  Generate itinerary
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </section>
   );

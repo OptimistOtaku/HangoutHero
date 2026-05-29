@@ -1,10 +1,41 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import fs from "fs";
+import path from "path";
 
-// #region agent log
-fetch('http://127.0.0.1:7242/ingest/dfd5675f-a018-4716-8a82-9adb4960b78e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/index.ts:5',message:'Server startup - checking NODE_ENV',data:{nodeEnv:process.env.NODE_ENV,allEnvKeys:Object.keys(process.env).filter(k=>k.includes('NODE')||k.includes('ENV')).slice(0,10)},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
-// #endregion
+function loadLocalEnv() {
+  const envPath = path.resolve(process.cwd(), ".env");
+
+  if (!fs.existsSync(envPath)) {
+    return;
+  }
+
+  const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf("=");
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    const value = trimmed.slice(separatorIndex + 1).trim().replace(/^["']|["']$/g, "");
+
+    if (key && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadLocalEnv();
 
 const app = express();
 app.use(express.json());
@@ -51,14 +82,7 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  // #region agent log
-  const appEnv = app.get("env");
-  fetch('http://127.0.0.1:7242/ingest/dfd5675f-a018-4716-8a82-9adb4960b78e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/index.ts:53',message:'Environment check before Vite/static decision',data:{appEnv,nodeEnv:process.env.NODE_ENV,willUseVite:appEnv==='development'},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
-  // #endregion
-  if (appEnv === "development") {
+  if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
@@ -71,9 +95,6 @@ app.use((req, res, next) => {
   // Use standard listen format for cross-platform compatibility
   // Windows doesn't support reusePort option
   server.listen(port, () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/dfd5675f-a018-4716-8a82-9adb4960b78e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/index.ts:68',message:'Server started successfully',data:{port,nodeEnv:process.env.NODE_ENV,appEnv:app.get('env')},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
     log(`serving on port ${port}`);
   });
 })();

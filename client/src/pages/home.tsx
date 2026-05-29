@@ -1,63 +1,40 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { motion } from "framer-motion";
+import { ArrowRight, HeartHandshake, MapPinned, Sparkles, Ticket, TrainFront } from "lucide-react";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import { ScrapbookImage } from "@/components/ui/scrapbook-image";
-import { InteractiveCalendar } from "@/components/ui/interactive-calendar";
+import { CITY_CARDS } from "@/lib/city-data";
 
-// Places data for carousel
-const places = [
-  { name: "Delhi", image: "https://images.unsplash.com/photo-1587474260584-136574528ed5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600", tagline: "Historic Capital" },
-  { name: "Noida", image: "https://images.unsplash.com/photo-1601961405399-801fb1936fc3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600", tagline: "Modern Hub" },
-  { name: "Jaipur", image: "https://images.unsplash.com/photo-1599661046289-e31897846e41?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600", tagline: "Pink City" },
-  { name: "Mussoorie", image: "https://images.unsplash.com/photo-1591017683656-4322564dde48?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600", tagline: "Queen of Hills" },
-  { name: "Mumbai", image: "https://images.unsplash.com/photo-1529253355930-ddbe423a2ac7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600", tagline: "City of Dreams" },
-  { name: "Goa", image: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600", tagline: "Beach Paradise" },
+const highlights = [
+  {
+    title: "Mood-first planning",
+    text: "Start with the feeling you want from the day, not a list of random venues.",
+    icon: Sparkles,
+  },
+  {
+    title: "Routes with personality",
+    text: "Every itinerary reads like a hand-picked city page, not a generated spreadsheet.",
+    icon: Ticket,
+  },
+  {
+    title: "Real-world pacing",
+    text: "Distance, weather, and travel style all shape the final route so it stays believable.",
+    icon: TrainFront,
+  },
 ];
 
-// Bento box items
-const bentoItems = [
-  {
-    id: 1,
-    title: "City Adventures",
-    description: "Explore hidden gems",
-    image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&h=800",
-    size: "large",
-    color: "from-pink-500/20 to-rose-500/20",
-  },
-  {
-    id: 2,
-    title: "Cafe Hopping",
-    description: "Perfect spots to relax",
-    image: "https://images.unsplash.com/photo-1517231925375-bf2cb42917a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=1200",
-    size: "tall",
-    color: "from-amber-500/20 to-orange-500/20",
-  },
-  {
-    id: 3,
-    title: "Cultural Experiences",
-    description: "Immerse in history",
-    image: "https://images.unsplash.com/photo-1547710272-f0cd2545f838?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
-    size: "medium",
-    color: "from-purple-500/20 to-indigo-500/20",
-  },
-  {
-    id: 4,
-    title: "Food Adventures",
-    description: "Taste local flavors",
-    image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
-    size: "medium",
-    color: "from-green-500/20 to-emerald-500/20",
-  },
-  {
-    id: 5,
-    title: "Nightlife",
-    description: "Evening vibes",
-    image: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
-    size: "wide",
-    color: "from-blue-500/20 to-cyan-500/20",
-  },
+const heroStats = [
+  { label: "Inputs", value: "Mood, budget, group, transport" },
+  { label: "Pacing", value: "Distance-aware route order" },
+  { label: "Output", value: "Map, weather, share link" },
 ];
 
 export default function Home() {
@@ -65,296 +42,225 @@ export default function Home() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentPlaceIndex((prev) => (prev + 1) % places.length);
-    }, 4000);
+      setCurrentPlaceIndex((prev) => (prev + 1) % CITY_CARDS.length);
+    }, 3600);
+
     return () => clearInterval(interval);
   }, []);
 
-  const handleStartPlanning = () => {
-    window.location.href = "/questionnaire";
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-      },
-    },
-  };
+  const activePlace = CITY_CARDS[currentPlaceIndex];
+  const previousPlace = CITY_CARDS[(currentPlaceIndex - 1 + CITY_CARDS.length) % CITY_CARDS.length];
+  const nextPlace = CITY_CARDS[(currentPlaceIndex + 1) % CITY_CARDS.length];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-pink-50 to-rose-50 relative overflow-hidden">
-      {/* Scrapbook decorative elements */}
-      <div className="absolute inset-0 pointer-events-none opacity-10">
-        <div className="absolute top-20 left-10 w-32 h-32 border-2 border-amber-300 rotate-12"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 border-2 border-pink-300 -rotate-6"></div>
-        <div className="absolute bottom-32 left-1/4 w-28 h-28 border-2 border-rose-300 rotate-45"></div>
-        <div className="absolute bottom-20 right-1/3 w-20 h-20 border-2 border-yellow-300 -rotate-12"></div>
+    <div className="relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-[2%] top-36 h-48 w-48 rotate-[12deg] border border-[rgba(255,203,69,0.14)]" />
+        <div className="absolute right-[7%] top-28 h-24 w-24 rounded-full bg-[rgba(255,56,92,0.09)] blur-2xl" />
+        <div className="absolute bottom-24 right-[11%] h-36 w-36 rotate-[-8deg] border border-[rgba(86,207,184,0.16)]" />
       </div>
 
-      <section className="relative z-10 py-12 md:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Hero Section */}
+      <section className="relative mx-auto grid min-h-[calc(100vh-86px)] max-w-7xl items-center gap-12 px-4 py-10 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:py-16">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-16 grid md:grid-cols-2 items-center gap-8"
+          transition={{ duration: 0.45 }}
+          className="max-w-3xl"
         >
-          <div className="text-center md:text-left">
-            <motion.h1
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="text-5xl md:text-7xl font-heading font-bold mb-6 relative inline-block"
-          >
-            <span className="relative z-10">Discover your perfect</span>
+          <div className="label-chip">
+            <HeartHandshake className="mr-2 h-4 w-4" />
+            itinerary planning with personality
+          </div>
+
+          <h1 className="mt-8 font-heading text-[3.2rem] font-extrabold leading-[0.98] text-[#111318] md:text-[5rem] xl:text-[6.1rem]">
+            AI itineraries for your
             <br />
-            <span className="text-primary relative z-10 inline-block mt-2">
-              hangout itinerary
-              <motion.span
-                className="absolute -bottom-2 left-0 right-0 h-3 bg-yellow-200/60 -z-0"
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ delay: 0.8, duration: 0.5 }}
-                style={{ transformOrigin: "left" }}
-              />
-            </span>
-            </motion.h1>
-            
-            <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-              className="text-xl md:text-2xl text-gray-700 mb-10 max-w-3xl leading-relaxed"
-          >
-            Let our AI create a personalized day plan based on your preferences and location. 
-            <span className="block mt-2 text-lg text-gray-600">No more endless searching or decision fatigue.</span>
-          </motion.p>
-          
-            <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-              className="flex flex-col sm:flex-row justify-start items-center gap-4 mb-12"
-          >
-            <Button
-              onClick={handleStartPlanning}
-              className="bg-primary hover:bg-[#FF6B85] text-white text-lg font-medium py-6 px-10 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300 relative overflow-hidden group"
-            >
-              <span className="relative z-10">Start Planning</span>
-              <motion.div
-                className="absolute inset-0 bg-white/20"
-                initial={{ x: "-100%" }}
-                whileHover={{ x: "100%" }}
-                transition={{ duration: 0.5 }}
-              />
-            </Button>
-            <Button
-              variant="outline"
-              className="border-2 border-gray-300 hover:border-primary text-text text-lg font-medium py-6 px-10 rounded-full bg-white/80 backdrop-blur-sm transform hover:scale-105 transition-all duration-300"
-            >
-              Browse Examples
-            </Button>
-            </motion.div>
+            next hangout, wrapped in
+            <br />
+            scrapbook energy.
+          </h1>
+
+          <p className="mt-6 max-w-2xl text-xl leading-9 text-slate-600 md:text-2xl">
+            HangoutHero turns your mood, city, budget, and travel style into a realistic day plan with weather, pacing, and shareable stops.
+          </p>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            {heroStats.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-2xl border border-[rgba(244,208,63,0.38)] bg-white/82 px-4 py-3"
+              >
+                <p className="text-[0.65rem] font-bold uppercase text-slate-400">
+                  {item.label}
+                </p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-[#111318]">{item.value}</p>
+              </div>
+            ))}
           </div>
 
-          {/* Polaroid image stack */}
-          <div className="hidden md:flex justify-center items-center">
-            <div className="relative w-80 h-56">
-              {(() => {
-                const prev = (currentPlaceIndex - 1 + places.length) % places.length;
-                const next = (currentPlaceIndex + 1) % places.length;
-                return (
-                  <div className="relative w-full h-full">
-                    <div className="absolute -left-6 top-2 transform">
-                      <ScrapbookImage
-                        polaroid
-                        rotation={-8}
-                        caption={`${places[prev].name} · ${places[prev].tagline}`}
-                        src={places[prev].image}
-                        alt={places[prev].name}
-                      />
-                    </div>
-                    <div className="absolute left-6 top-0 transform">
-                      <button
-                        aria-label="Shuffle images"
-                        onClick={() => setCurrentPlaceIndex((Math.random() * places.length) | 0)}
-                        className="focus:outline-none"
-                      >
-                        <ScrapbookImage
-                          polaroid
-                          rotation={2}
-                          caption={`${places[currentPlaceIndex].name} · ${places[currentPlaceIndex].tagline}`}
-                          src={places[currentPlaceIndex].image}
-                          alt={places[currentPlaceIndex].name}
-                        />
-                      </button>
-                    </div>
-                    <div className="absolute right-0 top-6 transform">
-                      <ScrapbookImage
-                        polaroid
-                        rotation={8}
-                        caption={`${places[next].name} · ${places[next].tagline}`}
-                        src={places[next].image}
-                        alt={places[next].name}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
+          <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <Button
+              asChild
+              className="h-16 rounded-full bg-primary px-10 text-lg font-bold text-white shadow-[0_18px_40px_rgba(255,56,92,0.24)] hover:bg-[#ff5977]"
+            >
+              <Link href="/questionnaire">
+                Start Planning
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <a href="#journey-styles">
+              <Button
+                variant="outline"
+                className="h-16 rounded-full border-[1.5px] border-slate-300 bg-white/70 px-10 text-lg font-semibold text-slate-700 hover:border-primary hover:bg-white"
+              >
+                Browse Examples
+              </Button>
+            </a>
           </div>
         </motion.div>
 
-        {/* Interactive Calendar Section */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 26 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
-          className="mb-16 max-w-4xl mx-auto"
+          transition={{ delay: 0.1, duration: 0.5 }}
+          className="relative mx-auto min-h-[560px] w-full max-w-[760px]"
         >
-          <InteractiveCalendar />
-        </motion.div>
+          <div className="absolute left-[5%] top-[22%] z-0">
+            <ScrapbookImage
+              polaroid
+              rotation={-9}
+              src={previousPlace.image}
+              alt={`${previousPlace.name} destination`}
+              caption={`${previousPlace.name}`}
+            />
+          </div>
+          <div className="absolute left-[25%] top-[2%] z-10">
+            <ScrapbookImage
+              polaroid
+              priority
+              rotation={2}
+              src={activePlace.image}
+              alt={`${activePlace.name} destination`}
+              caption={`${activePlace.name}`}
+            />
+          </div>
+          <div className="absolute left-[49%] top-[24%] z-0">
+            <ScrapbookImage
+              polaroid
+              rotation={9}
+              src={nextPlace.image}
+              alt={`${nextPlace.name} destination`}
+              caption={`${nextPlace.name}`}
+            />
+          </div>
 
-        {/* Moving Places Carousel */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.0, duration: 0.5 }}
-          className="mb-16"
-        >
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-center mb-8">
-            Popular <span className="text-primary">Destinations</span>
-          </h2>
-          <div className="max-w-6xl mx-auto">
-            <Carousel className="w-full">
-              <CarouselContent className="-ml-2 md:-ml-4">
-                {places.map((place, index) => (
-                  <CarouselItem key={place.name} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3">
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.1 }}
-                      whileHover={{ scale: 1.05, rotate: 1 }}
-                      className="relative h-64 md:h-80 rounded-2xl overflow-hidden shadow-lg group cursor-pointer border-4 border-white"
-                      style={{
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.2)",
-                      }}
-                    >
-                      <ScrapbookImage
-                        src={place.image}
-                        alt={place.name}
-                        className="w-full h-full"
-                        fallback={`https://via.placeholder.com/800x600/f0f0f0/666666?text=${encodeURIComponent(place.name)}`}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                        <h3 className="text-2xl md:text-3xl font-heading font-bold mb-1">{place.name}</h3>
-                        <p className="text-sm md:text-base text-white/90">{place.tagline}</p>
-                      </div>
-                      {/* Scrapbook corner decoration */}
-                      <div className="absolute top-2 right-2 w-8 h-8 bg-yellow-200/80 rotate-45 transform origin-center"></div>
-                    </motion.div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="left-2 md:left-4" />
-              <CarouselNext className="right-2 md:right-4" />
-            </Carousel>
+          <div className="scrapbook-card absolute bottom-6 left-0 max-w-sm p-6">
+            <div className="label-chip inline-flex">
+              <MapPinned className="mr-2 h-4 w-4" />
+              Current postcard
+            </div>
+            <h2 className="mt-4 font-heading text-4xl font-extrabold leading-none text-[#111318]">
+              {activePlace.name}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-slate-600">{activePlace.tagline}</p>
           </div>
         </motion.div>
+      </section>
 
-        {/* Bento Box Grid */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          transition={{ delay: 1.2 }}
-          className="mb-16"
-        >
-          <h2 className="text-3xl md:text-4xl font-heading font-bold text-center mb-12">
-            Explore <span className="text-primary">Experiences</span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 max-w-7xl mx-auto">
-            {bentoItems.map((item, index) => {
-              const colSpan = item.size === "large" ? "md:col-span-2" : item.size === "wide" ? "md:col-span-2" : "";
-              const rowSpan = item.size === "tall" ? "md:row-span-2" : "";
-              
+      <section id="how-it-works" className="page-shell">
+        <div className="editorial-card p-6 md:p-10">
+          <div className="max-w-3xl">
+            <div className="label-chip">How it works</div>
+            <h2 className="mt-6 font-heading text-4xl font-extrabold leading-none text-[#111318] md:text-6xl">
+              One mood in.
+              <br />
+              One polished route out.
+            </h2>
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
+              Pick the kind of day you want, lock your city and travel range, and let the app build a route that feels curated, not generic.
+            </p>
+          </div>
+
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {highlights.map((item, index) => {
+                const Icon = item.icon;
+
               return (
-                <motion.div
-                  key={item.id}
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.02, rotate: item.size === "tall" ? -1 : 1 }}
-                  className={`${colSpan} ${rowSpan} relative group cursor-pointer`}
-                  style={{
-                    transformStyle: "preserve-3d",
-                  }}
+                <motion.article
+                  key={item.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.25 }}
+                  transition={{ delay: index * 0.08, duration: 0.4 }}
+                  className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-[rgba(255,255,255,0.8)] p-6"
                 >
-                  <div
-                    className="relative h-64 md:h-full rounded-2xl overflow-hidden shadow-xl border-4 border-white"
-                    style={{
-                      boxShadow: "0 12px 40px rgba(0,0,0,0.15), inset 0 0 0 1px rgba(255,255,255,0.3)",
-                      transform: "perspective(1000px)",
-                    }}
-                  >
-                    <ScrapbookImage
-                      src={item.image}
-                      alt={item.title}
-                      className="w-full h-full"
-                      fallback={`https://via.placeholder.com/800x600/f0f0f0/666666?text=${encodeURIComponent(item.title)}`}
-                    />
-                    <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                      <h3 className="text-xl md:text-2xl font-heading font-bold mb-2">{item.title}</h3>
-                      <p className="text-sm md:text-base text-white/90">{item.description}</p>
-                    </div>
-                    {/* Scrapbook tape decoration */}
-                    <div className="absolute top-4 left-4 w-12 h-6 bg-yellow-200/90 rotate-[-15deg] shadow-md opacity-80"></div>
-                    <div className="absolute top-6 right-6 w-10 h-5 bg-pink-200/90 rotate-12 shadow-md opacity-80"></div>
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_10px_24px_rgba(255,56,92,0.18)]">
+                    <Icon className="h-5 w-5" />
                   </div>
-                </motion.div>
+                  <h3 className="font-heading text-2xl font-extrabold leading-none text-[#111318]">{item.title}</h3>
+                  <p className="mt-3 text-base leading-7 text-slate-600">{item.text}</p>
+                </motion.article>
               );
             })}
           </div>
-        </motion.div>
+        </div>
+      </section>
 
-        {/* CTA Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1, duration: 0.5 }}
-          className="text-center bg-white/60 backdrop-blur-md rounded-3xl p-8 md:p-12 border-4 border-amber-200/50 shadow-2xl"
-          style={{
-            boxShadow: "0 20px 60px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.5)",
-          }}
-        >
-          <h2 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-            Ready to plan your perfect day?
+      <section id="journey-styles" className="page-shell pt-2">
+        <div className="mb-6">
+          <div className="label-chip">Mood boards</div>
+          <h2 className="mt-6 font-heading text-4xl font-extrabold leading-none text-[#111318] md:text-6xl">
+            Browse city examples
+            <br />
+            before you generate.
           </h2>
-          <p className="text-lg text-gray-700 mb-8 max-w-2xl mx-auto">
-            Join thousands of users who have discovered amazing hangout spots with HangoutHero
-          </p>
-          <Button
-            onClick={handleStartPlanning}
-            className="bg-primary hover:bg-[#FF6B85] text-white text-lg font-medium py-6 px-12 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
-          >
-            Get Started Now
-          </Button>
-        </motion.div>
+        </div>
+
+        <Carousel className="w-full">
+          <CarouselContent className="-ml-4">
+            {CITY_CARDS.map((place) => (
+              <CarouselItem key={place.name} className="pl-4 md:basis-1/2 xl:basis-1/3">
+                <article className="overflow-hidden rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white/82 shadow-[0_18px_40px_rgba(255,56,92,0.07)]">
+                  <div className="relative h-80">
+                    <ScrapbookImage src={place.image} alt={`${place.name} destination`} className="h-full w-full" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[rgba(18,22,29,0.8)] via-[rgba(18,22,29,0.15)] to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                      <p className="font-scrap text-3xl leading-none text-[#fff2a8]">destination edit</p>
+                      <h3 className="mt-2 font-heading text-3xl font-extrabold leading-none">{place.name}</h3>
+                      <p className="mt-2 text-sm leading-6 text-white/85">{place.tagline}</p>
+                    </div>
+                  </div>
+                </article>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="left-3 border-slate-300 bg-white/90 hover:bg-white" />
+          <CarouselNext className="right-3 border-slate-300 bg-white/90 hover:bg-white" />
+        </Carousel>
+      </section>
+
+      <section id="why-hangouthero" className="page-shell pt-4">
+        <div className="rounded-3xl bg-[#111318] px-8 py-10 text-white shadow-[0_28px_60px_rgba(17,19,24,0.22)] md:px-10">
+          <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <p className="font-scrap text-4xl leading-none text-[#fff09b]">why it works</p>
+              <h2 className="mt-4 font-heading text-4xl font-extrabold leading-none md:text-6xl">
+                Built for spontaneous,
+                <br />
+                bright city days.
+              </h2>
+              <p className="mt-5 text-lg leading-8 text-white/74">
+                HangoutHero is meant to feel like a visual travel notebook with the logic of a real planner: mood-led, practical, and fun to use.
+              </p>
+            </div>
+            <Button
+              asChild
+              className="h-16 rounded-full bg-primary px-10 text-lg font-bold text-white hover:bg-[#ff5977]"
+            >
+              <Link href="/questionnaire">Build My Route</Link>
+            </Button>
+          </div>
+        </div>
       </section>
     </div>
   );

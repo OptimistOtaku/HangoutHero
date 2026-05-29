@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Cloud, CloudDrizzle, CloudFog, CloudRain, CloudSnow, Sun, Wind } from "lucide-react";
 
 interface WeatherData {
   temp: number;
   condition: string;
-  icon: string;
+  icon: "sun" | "cloud" | "drizzle" | "rain" | "storm" | "snow" | "fog";
   humidity: number;
   windSpeed: number;
+  locationName?: string;
 }
 
 interface WeatherWidgetProps {
@@ -19,33 +21,35 @@ export function WeatherWidget({ location }: WeatherWidgetProps) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchWeather = async () => {
       try {
-        // Using OpenWeather API (free tier)
-        const response = await fetch(
-          `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)},IN&appid=YOUR_OPENWEATHER_API_KEY&units=metric`
-        );
+        const response = await fetch(`/api/weather?location=${encodeURIComponent(location)}`, {
+          signal: controller.signal,
+        });
 
-        if (!response.ok) throw new Error("Weather fetch failed");
+        if (!response.ok) {
+          throw new Error("Weather fetch failed");
+        }
 
         const data = await response.json();
 
         setWeather({
           temp: Math.round(data.main.temp),
-          condition: data.weather[0].main,
-          icon: getWeatherIcon(data.weather[0].main),
+          condition: data.weather.condition,
+          icon: data.weather.icon,
           humidity: data.main.humidity,
-          windSpeed: Math.round(data.wind.speed)
+          windSpeed: Math.round(data.wind.speed),
+          locationName: data.locationName,
         });
+        setError(false);
       } catch (err) {
-        // Fallback weather data for demo
-        setWeather({
-          temp: 28,
-          condition: "Sunny",
-          icon: "sun",
-          humidity: 65,
-          windSpeed: 12
-        });
+        if ((err as Error).name === "AbortError") {
+          return;
+        }
+
+        setWeather(null);
         setError(true);
       } finally {
         setLoading(false);
@@ -53,62 +57,75 @@ export function WeatherWidget({ location }: WeatherWidgetProps) {
     };
 
     fetchWeather();
+
+    return () => controller.abort();
   }, [location]);
 
-  const getWeatherIcon = (condition: string): string => {
-    const conditionLower = condition.toLowerCase();
-    if (conditionLower.includes("clear") || conditionLower.includes("sun")) return "sun";
-    if (conditionLower.includes("cloud")) return "cloud";
-    if (conditionLower.includes("rain")) return "cloud-rain";
-    if (conditionLower.includes("thunder")) return "bolt";
-    if (conditionLower.includes("snow")) return "snowflake";
-    if (conditionLower.includes("mist") || conditionLower.includes("fog")) return "smog";
-    return "sun";
+  const getWeatherIcon = (icon: WeatherData["icon"]) => {
+    switch (icon) {
+      case "cloud":
+        return <Cloud className="h-8 w-8 text-secondary" />;
+      case "drizzle":
+        return <CloudDrizzle className="h-8 w-8 text-primary" />;
+      case "rain":
+      case "storm":
+        return <CloudRain className="h-8 w-8 text-primary" />;
+      case "snow":
+        return <CloudSnow className="h-8 w-8 text-sky-600" />;
+      case "fog":
+        return <CloudFog className="h-8 w-8 text-slate-500" />;
+      default:
+        return <Sun className="h-8 w-8 text-accent" />;
+    }
   };
 
   if (loading) {
     return (
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border-2 border-amber-200/50 animate-pulse">
-        <div className="h-16 bg-gray-200 rounded"></div>
+      <div className="animate-pulse rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white/80 p-5">
+        <div className="h-16 rounded-2xl bg-slate-200"></div>
       </div>
     );
   }
 
-  if (!weather) return null;
+  if (!weather) {
+    return (
+      <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white/82 p-5">
+        <p className="text-sm font-semibold text-slate-500">Weather unavailable for {location}</p>
+        {error && (
+          <p className="mt-2 text-xs text-slate-400">Live weather could not be refreshed.</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border-2 border-amber-200/50"
+      className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white/82 p-5 shadow-[0_14px_32px_rgba(255,56,92,0.05)]"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm text-gray-500 mb-1">Weather in {location}</p>
-          <div className="flex items-center gap-3">
-            <i className={`fas fa-${weather.icon} text-3xl text-primary`}></i>
+          <p className="text-xs font-bold uppercase text-slate-400">
+            Weather in {weather.locationName || location}
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            {getWeatherIcon(weather.icon)}
             <div>
-              <p className="text-2xl font-bold">{weather.temp}°C</p>
-              <p className="text-sm text-gray-600">{weather.condition}</p>
+              <p className="text-2xl font-extrabold text-[#111318]">{weather.temp}°C</p>
+              <p className="text-sm text-slate-600">{weather.condition}</p>
             </div>
           </div>
         </div>
 
-        <div className="text-right text-sm text-gray-600 space-y-1">
-          <div>
-            <i className="fas fa-droplet mr-1"></i>
-            {weather.humidity}%
-          </div>
-          <div>
-            <i className="fas fa-wind mr-1"></i>
+        <div className="space-y-2 text-right text-sm text-slate-600">
+          <div>{weather.humidity}% humidity</div>
+          <div className="flex items-center justify-end gap-1">
+            <Wind className="h-4 w-4" />
             {weather.windSpeed} km/h
           </div>
         </div>
       </div>
-
-      {error && (
-        <p className="text-xs text-gray-400 mt-2">*Sample weather data</p>
-      )}
     </motion.div>
   );
 }

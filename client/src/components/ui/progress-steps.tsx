@@ -1,3 +1,5 @@
+import { Check } from "lucide-react";
+
 interface ProgressStepsProps {
   currentStep: number;
 }
@@ -10,43 +12,46 @@ export function ProgressSteps({ currentStep }: ProgressStepsProps) {
   ];
 
   return (
-    <div className="flex items-center justify-between max-w-4xl mx-auto">
-      {steps.map((step, index) => (
-        <div key={step.id} className="flex items-center">
-          {/* Step circle with number or checkmark */}
-          <div 
-            className={`w-10 h-10 rounded-full flex items-center justify-center font-medium
-              ${currentStep > step.id 
-                ? 'bg-accent text-white' 
-                : currentStep === step.id 
-                  ? 'bg-primary text-white' 
-                  : 'bg-gray-300 text-white'}`}
-          >
-            {currentStep > step.id ? (
-              <i className="fas fa-check"></i>
-            ) : (
-              step.id
-            )}
-          </div>
-          
-          {/* Step name */}
-          <span className={`font-medium ml-3 ${currentStep >= step.id ? '' : 'text-gray-700'}`}>
-            {step.name}
-          </span>
-          
-          {/* Connector line (except after the last step) */}
-          {index < steps.length - 1 && (
-            <div 
-              className={`h-1 w-16 ml-3
-                ${currentStep > step.id + 1 
-                  ? 'bg-accent' 
-                  : currentStep > step.id 
-                    ? 'bg-accent' 
-                    : 'bg-gray-300'}`}
-            ></div>
-          )}
-        </div>
-      ))}
+    <div className="rounded-3xl border border-[rgba(244,208,63,0.45)] bg-white/75 px-4 py-5 shadow-[0_14px_34px_rgba(255,56,92,0.05)]">
+      <div className="grid gap-4 md:grid-cols-3">
+        {steps.map((step) => {
+          const isActive = currentStep === step.id;
+          const isDone = currentStep > step.id;
+
+          return (
+            <div
+              key={step.id}
+              className={`rounded-2xl border px-4 py-4 transition-colors ${
+                isActive
+                  ? "border-primary bg-primary/8"
+                  : isDone
+                    ? "border-[rgba(255,180,0,0.5)] bg-[rgba(255,248,214,0.72)]"
+                    : "border-slate-200 bg-white/70"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${
+                    isActive
+                      ? "bg-primary text-white"
+                      : isDone
+                        ? "bg-accent text-[#111318]"
+                        : "bg-slate-200 text-slate-500"
+                  }`}
+                >
+                  {isDone ? <Check className="h-4 w-4" /> : step.id}
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase text-slate-400">
+                    Step {step.id}
+                  </p>
+                  <p className="text-base font-semibold text-[#111318]">{step.name}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { ActivityCard } from "./activity-card";
 import { ItineraryActivity } from "@/lib/openai";
+import { CloudSun, Moon, Sun } from "lucide-react";
 
 interface ItineraryTimelineProps {
   activities: ItineraryActivity[];
@@ -13,14 +14,14 @@ export function ItineraryTimeline({ activities }: ItineraryTimelineProps) {
 
   return (
     <div className="relative">
-      <div className="absolute left-8 top-0 bottom-0 w-1 bg-gray-100"></div>
+      <div className="absolute bottom-0 left-8 top-0 w-px bg-gray-200"></div>
       
       {/* Morning activities */}
       {morningActivities.length > 0 && (
         <div className="mb-8 relative">
           <div className="flex">
-            <div className="timeline-dot w-16 h-16 rounded-full bg-accent flex-shrink-0 flex items-center justify-center z-10 shadow-md">
-              <i className="fas fa-sun text-white text-xl"></i>
+            <div className="timeline-dot z-10 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-accent shadow-md">
+              <Sun className="h-6 w-6 text-white" />
             </div>
             <div className="ml-6 pt-2">
               <h3 className="text-2xl font-heading font-bold mb-6">Morning</h3>
@@ -42,8 +43,8 @@ export function ItineraryTimeline({ activities }: ItineraryTimelineProps) {
       {afternoonActivities.length > 0 && (
         <div className="mb-8 relative">
           <div className="flex">
-            <div className="timeline-dot w-16 h-16 rounded-full bg-primary flex-shrink-0 flex items-center justify-center z-10 shadow-md">
-              <i className="fas fa-cloud-sun text-white text-xl"></i>
+            <div className="timeline-dot z-10 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-primary shadow-md">
+              <CloudSun className="h-6 w-6 text-white" />
             </div>
             <div className="ml-6 pt-2">
               <h3 className="text-2xl font-heading font-bold mb-6">Afternoon</h3>
@@ -65,8 +66,8 @@ export function ItineraryTimeline({ activities }: ItineraryTimelineProps) {
       {eveningActivities.length > 0 && (
         <div className="relative">
           <div className="flex">
-            <div className="timeline-dot w-16 h-16 rounded-full bg-[#A78BFA] flex-shrink-0 flex items-center justify-center z-10 shadow-md">
-              <i className="fas fa-moon text-white text-xl"></i>
+            <div className="timeline-dot z-10 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-[#111318] shadow-md">
+              <Moon className="h-6 w-6 text-white" />
             </div>
             <div className="ml-6 pt-2">
               <h3 className="text-2xl font-heading font-bold mb-6">Evening</h3>

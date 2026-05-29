@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
 interface ScrapbookImageProps {
@@ -13,20 +13,31 @@ interface ScrapbookImageProps {
   rotation?: number;
 }
 
-// Generate a better placeholder image
-function generatePlaceholder(width: number, height: number, text: string): string {
-  const colors = [
-    "FFE5B4", "FFD1DC", "E0BBE4", "DDA0DD", "B19CD9",
-    "FFB6C1", "FFA07A", "98D8C8", "F7DC6F", "AED6F1"
-  ];
-  const color = colors[Math.floor(Math.random() * colors.length)];
-  return `https://via.placeholder.com/${width}x${height}/${color}/FFFFFF?text=${encodeURIComponent(text)}`;
+function buildPlaceholder(alt: string) {
+  const label = (alt || "Travel moment").slice(0, 28);
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fff4de" />
+          <stop offset="100%" stop-color="#ffd7c7" />
+        </linearGradient>
+      </defs>
+      <rect width="800" height="600" fill="url(#bg)" />
+      <rect x="84" y="84" width="632" height="432" rx="28" fill="#fffaf3" stroke="#f0d79a" stroke-width="8" stroke-dasharray="14 10" />
+      <circle cx="400" cy="248" r="58" fill="#ff385c" opacity="0.16" />
+      <path d="M220 420l122-122 92 92 68-68 78 98H220z" fill="#56cfb8" opacity="0.92" />
+      <text x="400" y="474" text-anchor="middle" font-family="Plus Jakarta Sans, Arial, sans-serif" font-size="34" fill="#374151">${label}</text>
+    </svg>
+  `.trim();
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-export function ScrapbookImage({ 
-  src, 
-  alt, 
-  className = "", 
+export function ScrapbookImage({
+  src,
+  alt,
+  className = "",
   fallback,
   onLoad,
   priority = false,
@@ -34,161 +45,87 @@ export function ScrapbookImage({
   caption,
   rotation = 0,
 }: ScrapbookImageProps) {
-  const [imageSrc, setImageSrc] = useState(src);
+  const placeholder = useMemo(() => buildPlaceholder(alt), [alt]);
+  const [imageSrc, setImageSrc] = useState(src || fallback || placeholder);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [unsplashTried, setUnsplashTried] = useState(false);
 
-  // Update image source when src prop changes
   useEffect(() => {
-    if (src && src !== imageSrc) {
-      setImageSrc(src);
-      setIsLoaded(false);
-      setHasError(false);
-      setRetryCount(0);
-    }
-  }, [src]);
+    setImageSrc(src || fallback || placeholder);
+    setIsLoaded(false);
+    setHasError(false);
+    setRetryCount(0);
+  }, [src, fallback, placeholder]);
 
   const handleError = () => {
-    if (retryCount < 2 && imageSrc) {
-      // Retry with different image parameters
-      setRetryCount(prev => prev + 1);
-      const retrySrc = imageSrc.includes('?') 
-        ? `${imageSrc}&retry=${retryCount + 1}`
-        : `${imageSrc}?retry=${retryCount + 1}`;
-      setImageSrc(retrySrc);
+    if (retryCount < 1 && src && imageSrc === src) {
+      const separator = src.includes("?") ? "&" : "?";
+      setRetryCount(1);
+      setImageSrc(`${src}${separator}retry=1`);
       return;
     }
 
-    // If retries exhausted, try a keyword-based Unsplash source once
-    if (!unsplashTried && alt) {
-      setUnsplashTried(true);
-      const keywordSrc = `https://source.unsplash.com/800x600/?${encodeURIComponent(alt)}`;
-      setImageSrc(keywordSrc);
+    if (fallback && imageSrc !== fallback) {
+      setImageSrc(fallback);
       return;
     }
 
-    if (!hasError) {
-      setHasError(true);
-      if (fallback && fallback !== imageSrc) {
-        setImageSrc(fallback);
-      } else {
-        // Generate a colorful placeholder
-        const placeholder = generatePlaceholder(800, 600, alt || "Image");
-        setImageSrc(placeholder);
-      }
-    }
+    setHasError(true);
+    setImageSrc(placeholder);
   };
 
   const handleLoad = () => {
     setIsLoaded(true);
-    if (onLoad) onLoad();
+    setHasError(false);
+    onLoad?.();
   };
 
-  // Preload image if priority
-  useEffect(() => {
-    let mounted = true;
-    if (!imageSrc) return;
-
-    const img = new Image();
-    img.src = imageSrc;
-    img.decoding = 'async';
-    img.onload = () => {
-      if (!mounted) return;
-      setIsLoaded(true);
-      setHasError(false);
-      if (onLoad) onLoad();
-    };
-    img.onerror = () => {
-      if (!mounted) return;
-      handleError();
-    };
-
-    return () => {
-      mounted = false;
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [imageSrc]);
-
-  // Polaroid / scrapbook style wrapper
-  const imgElement = (
+  const image = (
     <motion.img
       src={imageSrc}
       alt={alt}
-      className={`w-full h-full object-cover transition-opacity duration-500 ${
-        isLoaded ? "opacity-100" : "opacity-0"
-      }`}
+      className={`h-full w-full object-cover transition-opacity duration-500 ${isLoaded ? "opacity-100" : "opacity-0"} ${className}`}
       onError={handleError}
       onLoad={handleLoad}
       loading={priority ? "eager" : "lazy"}
       decoding="async"
-      initial={{ scale: 1, opacity: 0 }}
-      animate={{ scale: isLoaded ? 1 : 1.02, opacity: isLoaded ? 1 : 0 }}
-      whileHover={{ scale: 1.05 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      style={{ 
-        imageRendering: "auto",
-        backfaceVisibility: "hidden",
-        transform: "translateZ(0)"
-      }}
+      initial={{ opacity: 0, scale: 1.02 }}
+      animate={{ opacity: isLoaded ? 1 : 0, scale: isLoaded ? 1 : 1.02 }}
+      whileHover={polaroid ? { scale: 1.02 } : undefined}
+      transition={{ duration: 0.35, ease: "easeOut" }}
     />
   );
 
   if (polaroid) {
     return (
-      <div
-        className={`relative inline-block ${className}`}
-        style={{ transform: `rotate(${rotation}deg)` }}
-      >
-        <div className="bg-white p-3 rounded-sm shadow-2xl border-2 border-gray-100 w-64">
-          <div className="w-full h-40 overflow-hidden rounded-sm">
-            {imgElement}
+      <div className="relative inline-block" style={{ transform: `rotate(${rotation}deg)` }}>
+        <div className="w-64 rounded-3xl border border-[rgba(240,215,154,0.78)] bg-[rgba(255,252,247,0.98)] p-3 shadow-[0_24px_60px_rgba(94,71,45,0.16)]">
+          <div className="relative h-40 overflow-hidden rounded-[1rem] bg-[linear-gradient(135deg,#fff0dc,#ffd9ca)]">
+            {image}
+            {!isLoaded && !hasError && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full border-4 border-[hsl(var(--primary))] border-t-transparent animate-spin" />
+              </div>
+            )}
           </div>
-          <div className="pt-3 pb-1 text-center">
-            <div className="text-sm font-heading font-semibold text-gray-800 truncate">
-              {caption || alt}
-            </div>
+          <div className="px-2 pb-1 pt-3 text-center">
+            <p className="font-scrap text-3xl leading-none text-[#ff6b85]">{caption || alt}</p>
           </div>
         </div>
-        {!isLoaded && !hasError && (
-          <motion.div 
-            className="absolute inset-0 bg-gradient-to-br from-amber-100 via-pink-100 to-rose-100 flex items-center justify-center"
-            initial={{ opacity: 1 }}
-            animate={{ opacity: [1, 0.7, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            <div className="flex flex-col items-center">
-              <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-            </div>
-          </motion.div>
-        )}
+        <div className="absolute left-6 top-0 h-6 w-16 -translate-y-2 rotate-[-7deg] rounded-sm bg-[rgba(255,238,161,0.92)] shadow-sm" />
       </div>
     );
   }
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      {imgElement}
+      {image}
       {!isLoaded && !hasError && (
-        <motion.div 
-          className="absolute inset-0 bg-gradient-to-br from-amber-100 via-pink-100 to-rose-100 flex items-center justify-center"
-          initial={{ opacity: 1 }}
-          animate={{ opacity: [1, 0.7, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-        >
-          <div className="flex flex-col items-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-            <div className="text-gray-500 text-xs">Loading image...</div>
-          </div>
-        </motion.div>
-      )}
-      {hasError && !isLoaded && (
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-          <div className="text-center p-4">
-            <i className="fas fa-image text-gray-400 text-2xl mb-2"></i>
-            <div className="text-gray-500 text-xs">{alt || "Image"}</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(135deg,#fff0dc,#ffd9ca)]">
+          <div className="flex flex-col items-center gap-2 text-slate-500">
+            <div className="h-8 w-8 rounded-full border-4 border-[hsl(var(--primary))] border-t-transparent animate-spin" />
+            <span className="text-xs font-semibold">Loading image</span>
           </div>
         </div>
       )}

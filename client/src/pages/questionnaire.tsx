@@ -1,313 +1,236 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProgressSteps } from "@/components/ui/progress-steps";
 import { PreferenceCard } from "@/components/ui/preference-card";
 import { PreferenceFormData } from "@/lib/openai";
 import { motion } from "framer-motion";
+import { useLocation } from "wouter";
+
+const defaultFormData: PreferenceFormData = {
+  hangoutTypes: [],
+  duration: "Full day",
+  budget: "Mid-range",
+  groupSize: "Solo",
+  mood: []
+};
+
+const moodColorMap: Record<string, string> = {
+  Relaxed: "bg-emerald-600 border-emerald-600 hover:bg-emerald-500",
+  Energetic: "bg-amber-500 border-amber-500 hover:bg-amber-400",
+  Romantic: "bg-rose-500 border-rose-500 hover:bg-rose-400",
+  Adventurous: "bg-orange-500 border-orange-500 hover:bg-orange-400",
+  Cultural: "bg-stone-900 border-stone-900 hover:bg-stone-700",
+  Foodie: "bg-[#47bfa3] border-[#47bfa3] hover:bg-[#39a88f]",
+  Social: "bg-sky-600 border-sky-600 hover:bg-sky-500",
+  Peaceful: "bg-cyan-600 border-cyan-600 hover:bg-cyan-500"
+};
 
 export default function Questionnaire() {
-  const [formData, setFormData] = useState<PreferenceFormData>({
-    hangoutTypes: [],
-    duration: "Full day",
-    budget: "Mid-range",
-    groupSize: "Solo",
-    mood: []
-  });
+  const [, setLocation] = useLocation();
+  const [formData, setFormData] = useState<PreferenceFormData>(defaultFormData);
+
+  useEffect(() => {
+    const savedPreferenceData = sessionStorage.getItem("preferenceData");
+    if (savedPreferenceData) {
+      setFormData(JSON.parse(savedPreferenceData));
+    }
+  }, []);
 
   const handleNext = () => {
-    // Save form data to session storage
-    sessionStorage.setItem('preferenceData', JSON.stringify(formData));
-    window.location.href = "/location";
+    sessionStorage.setItem("preferenceData", JSON.stringify(formData));
+    setLocation("/location");
   };
 
   const toggleHangoutType = (type: string) => {
-    setFormData(prev => {
-      const types = [...prev.hangoutTypes];
-      const index = types.indexOf(type);
-      
-      if (index >= 0) {
-        types.splice(index, 1);
-      } else {
-        types.push(type);
-      }
-      
+    setFormData((prev) => {
+      const types = prev.hangoutTypes.includes(type)
+        ? prev.hangoutTypes.filter((item) => item !== type)
+        : [...prev.hangoutTypes, type];
       return { ...prev, hangoutTypes: types };
     });
   };
 
-  const setDuration = (duration: string) => {
-    setFormData(prev => ({ ...prev, duration }));
-  };
-
-  const setBudget = (budget: string) => {
-    setFormData(prev => ({ ...prev, budget }));
-  };
-
-  const setGroupSize = (groupSize: string) => {
-    setFormData(prev => ({ ...prev, groupSize }));
-  };
-
   const toggleMood = (mood: string) => {
-    setFormData(prev => {
-      const moods = [...prev.mood];
-      const index = moods.indexOf(mood);
-      if (index >= 0) {
-        moods.splice(index, 1);
-      } else {
-        moods.push(mood);
-      }
+    setFormData((prev) => {
+      const moods = prev.mood.includes(mood)
+        ? prev.mood.filter((item) => item !== mood)
+        : [...prev.mood, mood];
       return { ...prev, mood: moods };
     });
   };
 
   return (
-    <section className="py-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-amber-50 via-pink-50 to-rose-50 min-h-screen">
-      <div className="max-w-4xl mx-auto">
+    <section className="relative mx-auto max-w-7xl px-4 py-8 md:px-8">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-4 top-10 h-28 w-28 rotate-12 border border-[rgba(255,180,0,0.14)]" />
+        <div className="absolute right-10 top-24 h-24 w-24 rotate-[-10deg] border border-[rgba(255,56,92,0.12)]" />
+      </div>
+
+      <div className="relative mx-auto max-w-5xl">
         <ProgressSteps currentStep={1} />
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.45 }}
+          className="mt-8"
         >
-          <Card className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border-4 border-amber-200/50 mt-8 relative overflow-hidden">
-            {/* Scrapbook decorations */}
-            <div className="absolute top-4 right-4 w-16 h-8 bg-yellow-200/80 rotate-12 shadow-md opacity-70"></div>
-            <div className="absolute bottom-4 left-4 w-12 h-6 bg-pink-200/80 rotate-[-15deg] shadow-md opacity-70"></div>
-            
-            <CardContent className="p-8 md:p-10 relative z-10">
-              <motion.h2
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-3xl md:text-4xl font-heading font-bold mb-3 text-gray-800"
-              >
-                What kind of hangout are you looking for?
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="text-gray-600 mb-8 text-lg"
-              >
-                Select all options that interest you. We'll create the perfect blend.
-              </motion.p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <PreferenceCard
-                title="Exploring"
-                description="Discover hidden gems, viewpoints, and local spots off the beaten path"
-                icon="compass"
-                color="primary-light"
-                selected={formData.hangoutTypes.includes("Exploring")}
-                onClick={() => toggleHangoutType("Exploring")}
-              />
-              
-              <PreferenceCard
-                title="Eating"
-                description="Sample delicious local cuisine from trendy restaurants to authentic street food"
-                icon="utensils"
-                color="accent"
-                selected={formData.hangoutTypes.includes("Eating")}
-                onClick={() => toggleHangoutType("Eating")}
-              />
-              
-              <PreferenceCard
-                title="Historical"
-                description="Visit museums, landmarks, and significant cultural and historical sites"
-                icon="landmark"
-                color="decorative"
-                selected={formData.hangoutTypes.includes("Historical")}
-                onClick={() => toggleHangoutType("Historical")}
-              />
-              
-              <PreferenceCard
-                title="Cafe Hopping"
-                description="Relax in cozy cafes with great ambiance, coffee, and sweet treats"
-                icon="coffee"
-                color="secondary"
-                selected={formData.hangoutTypes.includes("Cafe Hopping")}
-                onClick={() => toggleHangoutType("Cafe Hopping")}
-              />
-            </div>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="mb-8"
-            >
-              <h3 className="font-heading font-medium text-lg mb-4 flex items-center gap-2">
-                <i className="fas fa-clock text-primary"></i>
-                How much time do you have?
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {["2-3 hours", "Half day", "Full day", "Evening"].map((duration) => (
-                  <motion.div
-                    key={duration}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button
-                      variant={formData.duration === duration ? "default" : "outline"}
-                      className={`rounded-xl font-medium transition-all duration-200 ${
-                        formData.duration === duration
-                          ? "bg-primary text-white shadow-lg"
-                          : "border-2 border-gray-300 hover:border-primary bg-white"
-                      }`}
-                      onClick={() => setDuration(duration)}
-                    >
-                      {duration}
-                    </Button>
-                  </motion.div>
-                ))}
+          <Card className="overflow-hidden rounded-3xl border border-[rgba(244,208,63,0.45)] bg-white/85 shadow-[0_24px_60px_rgba(255,56,92,0.08)]">
+            <CardContent className="p-6 md:p-10">
+              <div className="max-w-3xl">
+                <p className="text-sm font-bold uppercase text-primary">Preferences</p>
+                <h1 className="mt-4 font-heading text-5xl leading-none text-[#111318] md:text-6xl">
+                  What kind of hangout are you planning?
+                </h1>
+                <p className="mt-4 text-lg leading-8 text-slate-600">
+                  Pick the vibe first. The itinerary gets better when the app understands the kind of day you actually want.
+                </p>
               </div>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="mb-8"
-            >
-              <h3 className="font-heading font-medium text-lg mb-4 flex items-center gap-2">
-                <i className="fas fa-wallet text-primary"></i>
-                What's your budget level?
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {["Budget-friendly", "Mid-range", "Luxury"].map((budget) => (
-                  <motion.div
-                    key={budget}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button
-                      variant={formData.budget === budget ? "default" : "outline"}
-                      className={`rounded-xl font-medium transition-all duration-200 ${
-                        formData.budget === budget
-                          ? "bg-primary text-white shadow-lg"
-                          : "border-2 border-gray-300 hover:border-primary bg-white"
-                      }`}
-                      onClick={() => setBudget(budget)}
-                    >
-                      {budget}
-                    </Button>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.55 }}
-              className="mb-8"
-            >
-              <h3 className="font-heading font-medium text-lg mb-4 flex items-center gap-2">
-                <i className="fas fa-users text-primary"></i>
-                Who's coming with you?
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { value: "Solo", icon: "user", label: "Just me" },
-                  { value: "Couple", icon: "heart", label: "Couple" },
-                  { value: "Small Group", icon: "user-group", label: "Small Group (3-5)" },
-                  { value: "Large Group", icon: "users", label: "Large Group (6+)" }
-                ].map((group) => (
-                  <motion.div
-                    key={group.value}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button
-                      variant={formData.groupSize === group.value ? "default" : "outline"}
-                      className={`rounded-xl font-medium transition-all duration-200 ${
-                        formData.groupSize === group.value
-                          ? "bg-primary text-white shadow-lg"
-                          : "border-2 border-gray-300 hover:border-primary bg-white"
-                      }`}
-                      onClick={() => setGroupSize(group.value)}
-                    >
-                      <i className={`fas fa-${group.icon} mr-2`}></i>
-                      {group.label}
-                    </Button>
-                  </motion.div>
-                ))}
+              <div className="mt-10 grid gap-5 md:grid-cols-2">
+                <PreferenceCard
+                  title="Exploring"
+                  description="Hidden gems, scenic routes, landmarks, and open-ended wandering."
+                  icon="compass"
+                  color="primary-light"
+                  selected={formData.hangoutTypes.includes("Exploring")}
+                  onClick={() => toggleHangoutType("Exploring")}
+                />
+                <PreferenceCard
+                  title="Eating"
+                  description="Restaurants, local specialties, food stops, and culinary detours."
+                  icon="utensils"
+                  color="accent"
+                  selected={formData.hangoutTypes.includes("Eating")}
+                  onClick={() => toggleHangoutType("Eating")}
+                />
+                <PreferenceCard
+                  title="Historical"
+                  description="Monuments, museums, city stories, and places with cultural weight."
+                  icon="landmark"
+                  color="decorative"
+                  selected={formData.hangoutTypes.includes("Historical")}
+                  onClick={() => toggleHangoutType("Historical")}
+                />
+                <PreferenceCard
+                  title="Cafe Hopping"
+                  description="Slow coffee, cozy corners, conversation spots, and aesthetic pauses."
+                  icon="coffee"
+                  color="secondary"
+                  selected={formData.hangoutTypes.includes("Cafe Hopping")}
+                  onClick={() => toggleHangoutType("Cafe Hopping")}
+                />
               </div>
-            </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="mb-8"
-            >
-              <h3 className="font-heading font-medium text-lg mb-4 flex items-center gap-2">
-                <i className="fas fa-magic text-primary"></i>
-                What vibe are you going for?
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {[
-                  { value: "Relaxed", icon: "spa", color: "emerald" },
-                  { value: "Energetic", icon: "bolt", color: "amber" },
-                  { value: "Romantic", icon: "heart", color: "rose" },
-                  { value: "Adventurous", icon: "hiking", color: "orange" },
-                  { value: "Cultural", icon: "landmark", color: "purple" },
-                  { value: "Foodie", icon: "utensils", color: "green" },
-                  { value: "Social", icon: "comments", color: "blue" },
-                  { value: "Peaceful", icon: "dove", color: "cyan" }
-                ].map((mood) => (
-                  <motion.div
-                    key={mood.value}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Button
-                      variant={formData.mood.includes(mood.value) ? "default" : "outline"}
-                      className={`rounded-xl font-medium transition-all duration-200 ${
-                        formData.mood.includes(mood.value)
-                          ? `bg-${mood.color}-500 text-white shadow-lg`
-                          : "border-2 border-gray-300 hover:border-primary bg-white"
-                      }`}
-                      onClick={() => toggleMood(mood.value)}
-                    >
-                      <i className={`fas fa-${mood.icon} mr-2`}></i>
-                      {mood.value}
-                    </Button>
-                  </motion.div>
-                ))}
+              <div className="mt-10 grid gap-8 lg:grid-cols-2">
+                <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-[rgba(255,249,239,0.72)] p-6">
+                  <h2 className="font-heading text-3xl leading-none text-[#111318]">Pacing and budget</h2>
+
+                  <div className="mt-6">
+                    <p className="mb-3 text-sm font-semibold uppercase text-slate-500">Duration</p>
+                    <div className="flex flex-wrap gap-3">
+                      {["2-3 hours", "Half day", "Full day", "Evening"].map((duration) => (
+                        <Button
+                          key={duration}
+                          type="button"
+                          variant={formData.duration === duration ? "default" : "outline"}
+                          className={`rounded-full px-5 ${
+                            formData.duration === duration
+                              ? "bg-primary text-white hover:bg-[#ff5977]"
+                              : "border-slate-300 bg-white text-slate-700 hover:border-primary"
+                          }`}
+                          onClick={() => setFormData((prev) => ({ ...prev, duration }))}
+                        >
+                          {duration}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                    <p className="mb-3 text-sm font-semibold uppercase text-slate-500">Budget</p>
+                    <div className="flex flex-wrap gap-3">
+                      {["Budget-friendly", "Mid-range", "Luxury"].map((budget) => (
+                        <Button
+                          key={budget}
+                          type="button"
+                          variant={formData.budget === budget ? "default" : "outline"}
+                          className={`rounded-full px-5 ${
+                            formData.budget === budget
+                              ? "bg-primary text-white hover:bg-[#ff5977]"
+                              : "border-slate-300 bg-white text-slate-700 hover:border-primary"
+                          }`}
+                          onClick={() => setFormData((prev) => ({ ...prev, budget }))}
+                        >
+                          {budget}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white p-6">
+                  <h2 className="font-heading text-3xl leading-none text-[#111318]">Group and mood</h2>
+
+                  <div className="mt-6">
+                    <p className="mb-3 text-sm font-semibold uppercase text-slate-500">Who’s coming</p>
+                    <div className="flex flex-wrap gap-3">
+                      {[
+                        { value: "Solo", label: "Just me" },
+                        { value: "Couple", label: "Couple" },
+                        { value: "Small Group", label: "Small Group (3-5)" },
+                        { value: "Large Group", label: "Large Group (6+)" }
+                      ].map((group) => (
+                        <Button
+                          key={group.value}
+                          type="button"
+                          variant={formData.groupSize === group.value ? "default" : "outline"}
+                          className={`rounded-full px-5 ${
+                            formData.groupSize === group.value
+                              ? "bg-primary text-white hover:bg-[#ff5977]"
+                              : "border-slate-300 bg-white text-slate-700 hover:border-primary"
+                          }`}
+                          onClick={() => setFormData((prev) => ({ ...prev, groupSize: group.value }))}
+                        >
+                          {group.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-8">
+                    <p className="mb-3 text-sm font-semibold uppercase text-slate-500">Mood</p>
+                    <div className="flex flex-wrap gap-3">
+                      {["Relaxed", "Energetic", "Romantic", "Adventurous", "Cultural", "Foodie", "Social", "Peaceful"].map((mood) => (
+                        <Button
+                          key={mood}
+                          type="button"
+                          variant={formData.mood.includes(mood) ? "default" : "outline"}
+                          className={`rounded-full px-5 ${
+                            formData.mood.includes(mood)
+                              ? `${moodColorMap[mood]} text-white`
+                              : "border-slate-300 bg-white text-slate-700 hover:border-primary"
+                          }`}
+                          onClick={() => toggleMood(mood)}
+                        >
+                          {mood}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="flex justify-end"
-            >
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
+
+              <div className="mt-10 flex justify-end">
                 <Button
                   onClick={handleNext}
-                  className="bg-primary hover:bg-[#FF6B85] text-white font-medium py-4 px-10 rounded-xl shadow-lg text-lg relative overflow-hidden group"
+                  className="h-14 rounded-full bg-primary px-10 text-lg font-bold text-white hover:bg-[#ff5977]"
                   disabled={formData.hangoutTypes.length === 0 || formData.mood.length === 0 || !formData.groupSize}
                 >
-                  <span className="relative z-10">
-                    Next <i className="fas fa-arrow-right ml-2"></i>
-                  </span>
-                  <motion.div
-                    className="absolute inset-0 bg-white/20"
-                    initial={{ x: "-100%" }}
-                    whileHover={{ x: "100%" }}
-                    transition={{ duration: 0.5 }}
-                  />
+                  Continue to location
                 </Button>
-              </motion.div>
-            </motion.div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>

@@ -1,73 +1,114 @@
 import { Link, useLocation } from "wouter";
+import { useState } from "react";
+import { MapPin, Menu, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const navItems = [
+  { label: "How it works", href: "/#how-it-works" },
+  { label: "Mood boards", href: "/#journey-styles" },
+  { label: "Why it works", href: "/#why-hangouthero" },
+];
+
 export default function Header() {
-  const [location] = useLocation();
-  
+  const [location, setLocation] = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const handleAnchorNav = (href: string) => {
+    setIsMenuOpen(false);
+    const [path, hash] = href.split("#");
+
+    if (path && path !== location) {
+      setLocation(path);
+    }
+
+    window.setTimeout(() => {
+      if (hash) {
+        document.getElementById(hash)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 0);
+  };
+
   return (
-    <header className="bg-gradient-to-r from-amber-50 to-pink-50 shadow-md border-b-2 border-amber-200/50 relative overflow-hidden">
-      {/* Scrapbook decorative elements */}
-      <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-200/30 rotate-45 transform translate-x-8 -translate-y-8"></div>
-      <div className="absolute bottom-0 left-0 w-16 h-16 bg-pink-200/30 -rotate-12 transform -translate-x-4 translate-y-4"></div>
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="flex justify-between items-center py-4">
-          <Link href="/">
-            <div className="flex items-center space-x-3 cursor-pointer group">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform duration-300">
-                  <i className="fas fa-map-marker-alt text-white text-lg"></i>
-                </div>
-                {/* Scrapbook tape decoration */}
-                <div className="absolute -top-1 -right-1 w-6 h-4 bg-yellow-200/90 rotate-12 shadow-sm"></div>
+    <header className="sticky top-0 z-40 border-b border-[rgba(244,208,63,0.42)] bg-[rgba(255,250,242,0.9)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-8">
+        <Link href="/">
+          <div className="flex cursor-pointer items-center gap-4" onClick={() => setIsMenuOpen(false)}>
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_14px_30px_rgba(255,56,92,0.25)]">
+              <MapPin className="h-6 w-6 fill-white" />
+              <div className="absolute -right-2 -top-2 rounded-full bg-[#fff1a8] p-1 text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
               </div>
-              <h1 className="text-2xl md:text-3xl font-heading font-bold text-text relative">
-                HangoutHero
-                <span className="absolute -bottom-1 left-0 right-0 h-2 bg-yellow-200/60 -z-0 transform -skew-x-12"></span>
-              </h1>
             </div>
-          </Link>
-          
-          <nav className="hidden md:flex space-x-6">
-            <a href="#" className="text-gray-700 hover:text-primary transition-colors">How it works</a>
-            <a href="#" className="text-gray-700 hover:text-primary transition-colors">Inspiration</a>
-            <a href="#" className="text-gray-700 hover:text-primary transition-colors">About</a>
-          </nav>
-          
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              className="hidden md:block text-text font-medium hover:text-primary"
-            >
-              Sign In
-            </Button>
-            
-            {location === "/" ? (
-              <Button 
-                className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-[#FF6B85]"
-              >
-                Get Started
-              </Button>
-            ) : (
-              <Link href="/">
-                <Button 
-                  variant="outline"
-                  className="border border-gray-300 hover:border-primary text-text"
-                >
-                  Home
-                </Button>
-              </Link>
-            )}
-            
-            <Button 
-              variant="ghost" 
-              className="md:hidden text-gray-700 p-2"
-            >
-              <i className="fas fa-bars text-xl"></i>
-            </Button>
+            <div>
+              <p className="font-heading text-[1.8rem] font-extrabold leading-none text-[#101218] md:text-[2rem]">
+                HangoutHero
+              </p>
+              <p className="font-scrap -mt-1 text-2xl leading-none text-[#ff7d9a]">plan it like a page</p>
+            </div>
           </div>
+        </Link>
+
+        <nav className="hidden items-center gap-8 md:flex">
+          {navItems.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => handleAnchorNav(item.href)}
+              className="text-[1rem] font-semibold text-slate-700 transition-colors hover:text-primary"
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="hidden items-center gap-3 md:flex">
+          {location === "/" ? (
+            <>
+              <Button asChild variant="ghost" className="rounded-full px-4 text-base font-semibold text-slate-700 hover:bg-white/60 hover:text-primary">
+                <button type="button" onClick={() => handleAnchorNav("/#journey-styles")}>Browse Cities</button>
+              </Button>
+              <Button asChild className="rounded-full bg-primary px-7 py-6 text-base font-bold text-white hover:bg-[#ff5977]">
+                <Link href="/questionnaire">Start Planning</Link>
+              </Button>
+            </>
+          ) : (
+            <Button asChild className="rounded-full bg-primary px-6 py-5 text-sm font-bold text-white hover:bg-[#ff5977]">
+              <Link href="/">Back Home</Link>
+            </Button>
+          )}
         </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-full md:hidden"
+          aria-label="Open navigation"
+          onClick={() => setIsMenuOpen((prev) => !prev)}
+        >
+          {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </Button>
       </div>
+
+      {isMenuOpen && (
+        <div className="border-t border-[rgba(244,208,63,0.42)] bg-[rgba(255,250,242,0.98)] px-4 py-4 md:hidden">
+          <nav className="flex flex-col gap-2">
+            {navItems.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => handleAnchorNav(item.href)}
+                className="rounded-2xl px-4 py-3 text-base font-semibold text-slate-700 hover:bg-white/70"
+              >
+                {item.label}
+              </button>
+            ))}
+            <Link href="/questionnaire">
+              <Button className="mt-2 w-full rounded-full bg-primary py-6 text-base font-bold text-white hover:bg-[#ff5977]">
+                Start Planning
+              </Button>
+            </Link>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
