@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 // Validation schemas
 const preferenceSchema = z.object({
@@ -131,7 +131,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           throw new Error("GEMINI_API_KEY is not configured");
         }
 
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        // ✅ FIXED: Use the correct @google/genai SDK
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
         console.log("Attempting to use Gemini for personalized itinerary...");
         
         // Prepare the prompt for Gemini
@@ -181,19 +182,25 @@ Focus on authentic Indian experiences.
 
 Return only valid JSON without any markdown formatting or code blocks.`;
 
-        // Get the Gemini model with JSON response format
-        const model = genAI.getGenerativeModel({ 
+        // ✅ FIXED: Use correct @google/genai API
+        const response = await ai.models.generateContent({
           model: "gemini-2.5-flash",
-          generationConfig: {
+          contents: prompt,
+          config: {
             temperature: 0.8,
             responseMimeType: "application/json",
-          }
+            thinkingConfig: {
+              thinkingBudget: 0, // Disable thinking for faster responses
+            },
+          },
         });
 
-        // Request completion from Gemini
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const responseText = response.text();
+        // ✅ FIXED: response.text is a string property, not a method
+        const responseText = response.text;
+
+        if (!responseText) {
+          throw new Error("Empty response from Gemini");
+        }
 
         itineraryData = normalizeGeneratedItinerary(
           JSON.parse(responseText),
@@ -887,7 +894,7 @@ Return only valid JSON without any markdown formatting or code blocks.`;
   return server;
 }
 
-// Helper function to get random images for each category
+// Helper function to normalize generated itinerary from Gemini
 function normalizeGeneratedItinerary(
   generatedData: any,
   preferences: z.infer<typeof preferenceSchema>,
@@ -1148,41 +1155,17 @@ function getRandomImageForCategory(category: string): string {
     ]
   };
 
-  // If the category doesn't exist, use a default category
   const images = categoryImages[category] || categoryImages["cafe atmosphere"];
-  
-  // Return a random image from the category
   return images[Math.floor(Math.random() * images.length)];
 }
 
 function getWeatherDetails(code: number): { condition: string; icon: "sun" | "cloud" | "drizzle" | "rain" | "storm" | "snow" | "fog" } {
-  if (code === 0) {
-    return { condition: "Clear", icon: "sun" };
-  }
-
-  if ([1, 2, 3].includes(code)) {
-    return { condition: "Partly cloudy", icon: "cloud" };
-  }
-
-  if ([45, 48].includes(code)) {
-    return { condition: "Foggy", icon: "fog" };
-  }
-
-  if ([51, 53, 55, 56, 57].includes(code)) {
-    return { condition: "Drizzle", icon: "drizzle" };
-  }
-
-  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) {
-    return { condition: "Rain", icon: "rain" };
-  }
-
-  if ([71, 73, 75, 77, 85, 86].includes(code)) {
-    return { condition: "Snow", icon: "snow" };
-  }
-
-  if ([95, 96, 99].includes(code)) {
-    return { condition: "Thunderstorm", icon: "storm" };
-  }
-
+  if (code === 0) return { condition: "Clear", icon: "sun" };
+  if ([1, 2, 3].includes(code)) return { condition: "Partly cloudy", icon: "cloud" };
+  if ([45, 48].includes(code)) return { condition: "Foggy", icon: "fog" };
+  if ([51, 53, 55, 56, 57].includes(code)) return { condition: "Drizzle", icon: "drizzle" };
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { condition: "Rain", icon: "rain" };
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { condition: "Snow", icon: "snow" };
+  if ([95, 96, 99].includes(code)) return { condition: "Thunderstorm", icon: "storm" };
   return { condition: "Cloudy", icon: "cloud" };
 }

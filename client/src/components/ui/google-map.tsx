@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Route, X } from "lucide-react";
 
 interface Activity {
   id: string;
@@ -222,9 +221,9 @@ export function GoogleMap({ activities, location }: GoogleMapProps) {
 
   if (!isScriptLoaded) {
     return (
-      <div className="flex h-72 w-full items-center justify-center rounded-2xl bg-gray-100 md:h-96">
+      <div className="w-full h-72 md:h-96 bg-gray-100 rounded-xl flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="mx-auto mb-2 h-7 w-7 animate-spin text-primary" />
+          <i className="fas fa-spinner fa-spin text-primary text-2xl mb-2"></i>
           <p className="text-gray-600">Loading map...</p>
         </div>
       </div>
@@ -233,7 +232,7 @@ export function GoogleMap({ activities, location }: GoogleMapProps) {
 
   return (
     <div className="relative">
-      <div ref={mapRef} className="h-72 w-full rounded-2xl md:h-96" />
+      <div ref={mapRef} className="w-full h-72 md:h-96 rounded-xl" />
 
       {/* Map controls */}
       <div className="absolute bottom-4 left-4 flex gap-2">
@@ -243,7 +242,7 @@ export function GoogleMap({ activities, location }: GoogleMapProps) {
           onClick={showRoute ? clearRoute : showDirections}
           className="bg-white/90 backdrop-blur-sm shadow-lg"
         >
-          {showRoute ? <X className="mr-2 h-4 w-4" /> : <Route className="mr-2 h-4 w-4" />}
+          <i className={`fas fa-${showRoute ? "times" : "route"} mr-2`}></i>
           {showRoute ? "Hide Route" : "Show Route"}
         </Button>
       </div>
