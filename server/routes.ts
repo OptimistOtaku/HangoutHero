@@ -893,8 +893,16 @@ function normalizeGeneratedItinerary(
   preferences: z.infer<typeof preferenceSchema>,
   locationData: z.infer<typeof locationSchema>
 ): ItineraryResponse {
-  const activities = Array.isArray(generatedData.activities)
-    ? generatedData.activities.slice(0, 6).map((activity: any, index: number) => {
+  const activitiesSource =
+    generatedData.activities ||
+    generatedData.itinerary?.activities ||
+    generatedData.day_plan ||
+    generatedData.dayPlan ||
+    generatedData.stops ||
+    [];
+
+  const generatedActivities = Array.isArray(activitiesSource)
+    ? activitiesSource.slice(0, 6).map((activity: any, index: number) => {
         const type = normalizeActivityType(activity.type);
         const timeOfDay = normalizeTimeOfDay(
           activity.timeOfDay || activity.time_of_day_category || activity.time_of_day,
@@ -915,6 +923,14 @@ function normalizeGeneratedItinerary(
         };
       })
     : [];
+
+  const activities =
+    generatedActivities.length >= 6
+      ? generatedActivities
+      : [
+          ...generatedActivities,
+          ...buildFallbackActivities(locationData.location).slice(generatedActivities.length),
+        ];
 
   const recommendationsSource =
     generatedData.recommendations ||
@@ -1022,6 +1038,83 @@ function buildFallbackRecommendations(location: string, duration: string): Recom
       image: getRandomImageForCategory("city exploration"),
       rating: "4.6 ★",
       duration: "Half day",
+    },
+  ];
+}
+
+function buildFallbackActivities(location: string): ItineraryActivity[] {
+  return [
+    {
+      id: "fallback-act-1",
+      time: "9:00 AM",
+      title: `Morning walk in ${location}`,
+      description: "Start with an easy landmark walk to get oriented and keep the first stop low-pressure.",
+      location: `${location} city center`,
+      image: getRandomImageForCategory("city exploration"),
+      price: "Free",
+      rating: "4.5 ★",
+      timeOfDay: "morning",
+      type: "exploring",
+    },
+    {
+      id: "fallback-act-2",
+      time: "11:00 AM",
+      title: "Cafe pause",
+      description: "Take a relaxed coffee break at a well-reviewed local cafe before the busier afternoon stops.",
+      location: `${location} main market`,
+      image: getRandomImageForCategory("cafe atmosphere"),
+      price: "₹",
+      rating: "4.6 ★",
+      timeOfDay: "morning",
+      type: "cafe",
+    },
+    {
+      id: "fallback-act-3",
+      time: "1:30 PM",
+      title: "Local lunch stop",
+      description: "Choose a popular neighborhood restaurant for a practical lunch break with local flavor.",
+      location: `${location} food district`,
+      image: getRandomImageForCategory("restaurant dining"),
+      price: "₹₹",
+      rating: "4.6 ★",
+      timeOfDay: "afternoon",
+      type: "eating",
+    },
+    {
+      id: "fallback-act-4",
+      time: "3:30 PM",
+      title: "Culture and neighborhood explore",
+      description: "Spend the afternoon around a heritage site, art street, museum, or walkable market nearby.",
+      location: `${location} heritage area`,
+      image: getRandomImageForCategory("historical landmarks"),
+      price: "₹",
+      rating: "4.5 ★",
+      timeOfDay: "afternoon",
+      type: "historical",
+    },
+    {
+      id: "fallback-act-5",
+      time: "6:00 PM",
+      title: "Golden-hour viewpoint",
+      description: "Move to a scenic public space or promenade for a calmer evening transition.",
+      location: `${location} viewpoint`,
+      image: getRandomImageForCategory("city exploration"),
+      price: "Free",
+      rating: "4.7 ★",
+      timeOfDay: "evening",
+      type: "exploring",
+    },
+    {
+      id: "fallback-act-6",
+      time: "8:00 PM",
+      title: "Dinner closeout",
+      description: "End with dinner at a reliable local restaurant that fits the selected budget and group size.",
+      location: `${location} restaurant district`,
+      image: getRandomImageForCategory("restaurant dining"),
+      price: "₹₹",
+      rating: "4.6 ★",
+      timeOfDay: "evening",
+      type: "eating",
     },
   ];
 }

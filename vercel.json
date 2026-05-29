@@ -6,7 +6,8 @@
   "framework": null,
   "functions": {
     "api/index.ts": {
-      "includeFiles": "server/**"
+      "includeFiles": "server/**",
+      "maxDuration": 60
     }
   },
   "routes": [
