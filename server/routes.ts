@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 import { z } from "zod";
 import { GoogleGenAI } from "@google/genai";
 
@@ -23,6 +23,9 @@ const generateItinerarySchema = z.object({
   preferences: preferenceSchema,
   locationData: locationSchema
 });
+
+const placePhotoCache = new Map<string, { body: Buffer; contentType: string; expiresAt: number }>();
+const PLACE_PHOTO_CACHE_MS = 1000 * 60 * 60 * 24;
 
 // Types for API response
 interface ItineraryActivity {
@@ -56,6 +59,31 @@ interface ItineraryResponse {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.get("/api/place-photo", async (req: Request, res: Response) => {
+    const query = String(req.query.query || "").trim();
+    const fallback = String(req.query.fallback || "").trim();
+    const stockFallback = String(req.query.stockFallback || "").trim();
+
+    if (!query) {
+      return await redirectToImageFallback(res, query, fallback, stockFallback);
+    }
+
+    try {
+      const photo = await fetchGooglePlacePhoto(query);
+
+      if (!photo) {
+        return await redirectToImageFallback(res, query, fallback, stockFallback);
+      }
+
+      res.setHeader("Content-Type", photo.contentType);
+      res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=86400");
+      return res.send(photo.body);
+    } catch (error) {
+      console.error("Error fetching Google place photo:", error);
+      return await redirectToImageFallback(res, query, fallback, stockFallback);
+    }
+  });
+
   app.get("/api/weather", async (req: Request, res: Response) => {
     const location = String(req.query.location || "").trim();
 
@@ -764,6 +792,8 @@ Return only valid JSON without any markdown formatting or code blocks.`;
         itineraryData = itineraries[locationToUse];
       }
       
+      itineraryData = withGooglePlaceImages(itineraryData, locationData.location);
+
       // Save the generated itinerary to storage
       try {
         const savedItinerary = await storage.saveItinerary(itineraryData);
@@ -1124,6 +1154,240 @@ function buildFallbackActivities(location: string): ItineraryActivity[] {
       type: "eating",
     },
   ];
+}
+
+function withGooglePlaceImages(itinerary: ItineraryResponse, baseLocation: string): ItineraryResponse {
+  return {
+    ...itinerary,
+    activities: itinerary.activities.map((activity) => ({
+      ...activity,
+      image: buildPlacePhotoProxyUrl(
+        `${activity.title} ${activity.location || baseLocation}`,
+        resolveStockImageFallback(activity.image, categoryForActivityType(activity.type))
+      ),
+    })),
+    recommendations: itinerary.recommendations.map((recommendation) => ({
+      ...recommendation,
+      image: buildPlacePhotoProxyUrl(
+        `${recommendation.title} ${baseLocation}`,
+        resolveStockImageFallback(recommendation.image, "historical landmarks")
+      ),
+    })),
+  };
+}
+
+function resolveStockImageFallback(image: string | undefined, category: string): string {
+  if (image && /^https?:\/\//.test(image) && !image.includes("maps.googleapis.com")) {
+    return image;
+  }
+
+  return getRandomImageForCategory(category);
+}
+
+function buildPlacePhotoProxyUrl(query: string, fallback: string): string {
+  const params = new URLSearchParams({
+    query,
+    stockFallback: fallback,
+  });
+
+  return `/api/place-photo?${params.toString()}`;
+}
+
+function getGoogleMapsApiKey(): string | undefined {
+  return process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+}
+
+function buildGoogleStreetViewUrl(query: string): string | null {
+  const apiKey = getGoogleMapsApiKey();
+
+  if (!apiKey) {
+    return null;
+  }
+
+  const url = new URL("https://maps.googleapis.com/maps/api/streetview");
+  url.searchParams.set("size", "900x560");
+  url.searchParams.set("location", query);
+  url.searchParams.set("fov", "82");
+  url.searchParams.set("pitch", "2");
+  url.searchParams.set("source", "outdoor");
+  url.searchParams.set("return_error_code", "true");
+  url.searchParams.set("key", apiKey);
+
+  return url.toString();
+}
+
+async function fetchGooglePlacePhoto(query: string): Promise<{ body: Buffer; contentType: string } | null> {
+  const apiKey = getGoogleMapsApiKey();
+
+  if (!apiKey) {
+    return null;
+  }
+
+  const cacheKey = query.toLowerCase();
+  const cached = placePhotoCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > Date.now()) {
+    return { body: cached.body, contentType: cached.contentType };
+  }
+
+  for (const candidateQuery of buildPlacePhotoQueries(query)) {
+    const photo =
+      await fetchGooglePlacePhotoNew(candidateQuery, apiKey) ||
+      await fetchGooglePlacePhotoLegacy(candidateQuery, apiKey);
+
+    if (photo) {
+      placePhotoCache.set(cacheKey, {
+        ...photo,
+        expiresAt: Date.now() + PLACE_PHOTO_CACHE_MS,
+      });
+
+      return photo;
+    }
+  }
+
+  return null;
+}
+
+function buildPlacePhotoQueries(query: string): string[] {
+  const cleaned = query
+    .replace(/\b(visit|morning|evening|afternoon|breakfast|lunch|dinner|at|the)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return Array.from(new Set([query, cleaned].filter(Boolean)));
+}
+
+async function fetchGooglePlacePhotoNew(
+  query: string,
+  apiKey: string
+): Promise<{ body: Buffer; contentType: string } | null> {
+  const searchResponse = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": "places.displayName,places.photos.name",
+    },
+    body: JSON.stringify({
+      textQuery: query,
+      pageSize: 1,
+      regionCode: "IN",
+    }),
+  });
+
+  if (!searchResponse.ok) {
+    console.warn(`Google Places search failed with ${searchResponse.status}`);
+    return null;
+  }
+
+  const searchData = await searchResponse.json();
+  const photoName = searchData.places?.[0]?.photos?.[0]?.name;
+
+  if (!photoName) {
+    return null;
+  }
+
+  const mediaResponse = await fetch(
+    `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=900&key=${encodeURIComponent(apiKey)}`,
+    { redirect: "follow" }
+  );
+
+  if (!mediaResponse.ok) {
+    console.warn(`Google Places photo failed with ${mediaResponse.status}`);
+    return null;
+  }
+
+  const contentType = mediaResponse.headers.get("content-type") || "image/jpeg";
+  const body = Buffer.from(await mediaResponse.arrayBuffer());
+
+  return { body, contentType };
+}
+
+async function fetchGooglePlacePhotoLegacy(
+  query: string,
+  apiKey: string
+): Promise<{ body: Buffer; contentType: string } | null> {
+  const searchUrl = new URL("https://maps.googleapis.com/maps/api/place/findplacefromtext/json");
+  searchUrl.searchParams.set("input", query);
+  searchUrl.searchParams.set("inputtype", "textquery");
+  searchUrl.searchParams.set("fields", "photos,name");
+  searchUrl.searchParams.set("key", apiKey);
+
+  const searchResponse = await fetch(searchUrl);
+
+  if (!searchResponse.ok) {
+    console.warn(`Google legacy Places search failed with ${searchResponse.status}`);
+    return null;
+  }
+
+  const searchData = await searchResponse.json();
+  const photoReference = searchData.candidates?.[0]?.photos?.[0]?.photo_reference;
+
+  if (!photoReference) {
+    return null;
+  }
+
+  const photoUrl = new URL("https://maps.googleapis.com/maps/api/place/photo");
+  photoUrl.searchParams.set("maxwidth", "900");
+  photoUrl.searchParams.set("photo_reference", photoReference);
+  photoUrl.searchParams.set("key", apiKey);
+
+  const photoResponse = await fetch(photoUrl, { redirect: "follow" });
+
+  if (!photoResponse.ok) {
+    console.warn(`Google legacy Places photo failed with ${photoResponse.status}`);
+    return null;
+  }
+
+  const contentType = photoResponse.headers.get("content-type") || "image/jpeg";
+  const body = Buffer.from(await photoResponse.arrayBuffer());
+
+  return { body, contentType };
+}
+
+async function redirectToImageFallback(res: Response, query: string, fallback: string, stockFallback = "") {
+  const googleStreetViewUrl = buildGoogleStreetViewUrl(query);
+
+  if (googleStreetViewUrl) {
+    const googleFallback = await fetchImageUrl(googleStreetViewUrl);
+
+    if (googleFallback) {
+      res.setHeader("Content-Type", googleFallback.contentType);
+      res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=86400");
+      return res.send(googleFallback.body);
+    }
+  }
+
+  const resolvedFallback = stockFallback || fallback;
+
+  if (resolvedFallback && /^https?:\/\//.test(resolvedFallback)) {
+    return res.redirect(302, resolvedFallback);
+  }
+
+  if (fallback && /^https?:\/\//.test(fallback)) {
+    return res.redirect(302, fallback);
+  }
+
+  return res.status(404).json({ message: "Place photo unavailable" });
+}
+
+async function fetchImageUrl(url: string): Promise<{ body: Buffer; contentType: string } | null> {
+  try {
+    const response = await fetch(url, { redirect: "follow" });
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!response.ok || !contentType.startsWith("image/")) {
+      return null;
+    }
+
+    return {
+      body: Buffer.from(await response.arrayBuffer()),
+      contentType,
+    };
+  } catch (error) {
+    console.warn("Image fallback fetch failed");
+    return null;
+  }
 }
 
 function getRandomImageForCategory(category: string): string {

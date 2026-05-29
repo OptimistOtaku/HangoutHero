@@ -13,10 +13,10 @@ export default function Loading() {
   const [currentFact, setCurrentFact] = useState(0);
 
   const funFacts = [
-    "We balance your mood, timing, and distance so the route feels usable.",
-    "Live weather is added to the results page to ground the itinerary in the current destination.",
-    "The app prioritizes realistic sequencing over random venue lists.",
-    "Each plan is tailored around activity type, budget, group size, and travel style.",
+    "Balancing your mood, timing, and distance so the route feels usable.",
+    "Adding live weather and map context for the destination.",
+    "Sequencing real stops instead of handing you a random venue list.",
+    "Matching activity type, budget, group size, and travel style.",
   ];
 
   useEffect(() => {
@@ -94,10 +94,10 @@ export default function Loading() {
             </div>
 
             <h1 className="mt-8 font-heading text-5xl leading-none text-[#111318] md:text-6xl">
-              Crafting your itinerary
+              Building your route
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-600">
-              HangoutHero is using AI to turn your preferences into a route with believable pacing, location fit, and a better day flow.
+              HangoutHero is turning your preferences into a mapped hangout plan with believable pacing, location fit, and visual place cards.
             </p>
 
             <div className="mx-auto mt-10 w-full max-w-xl overflow-hidden rounded-full bg-slate-200">

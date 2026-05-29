@@ -153,9 +153,33 @@
 .scrapbook-card {
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(245, 219, 162, 0.78);
-  border-radius: 1.25rem;
+  border-radius: 12px;
   box-shadow: 0 24px 60px rgba(255, 56, 92, 0.08);
   backdrop-filter: blur(12px);
+}
+
+.scrapbook-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(17, 19, 24, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 19, 24, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 15% 12%, rgba(255, 203, 69, 0.24), transparent 22%),
+    radial-gradient(circle at 85% 24%, rgba(86, 207, 184, 0.18), transparent 20%);
+  background-size: 28px 28px, 28px 28px, auto, auto;
+  mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
+}
+
+.scrapbook-note {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 249, 239, 0.88)),
+    repeating-linear-gradient(0deg, transparent 0 27px, rgba(244, 208, 63, 0.22) 28px);
+  border: 1px solid rgba(245, 219, 162, 0.86);
+  border-radius: 12px;
+  box-shadow: 0 24px 52px rgba(94, 71, 45, 0.14);
+  backdrop-filter: blur(14px);
 }
 
 .tape-strip {
@@ -168,7 +192,7 @@
 }
 
 .editorial-card {
-  @apply overflow-hidden rounded-3xl border bg-white shadow-[0_24px_60px_rgba(255,56,92,0.08)];
+  @apply overflow-hidden rounded-[14px] border bg-white shadow-[0_24px_60px_rgba(255,56,92,0.08)];
   border-color: rgba(244, 208, 63, 0.45);
 }
 

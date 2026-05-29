@@ -2,4 +2,14 @@
 > rest-express@1.0.0 dev
 > cross-env NODE_ENV=development tsx server/index.ts
 
-9:12:52 AM [express] serving on port 5000
+2:12:46 PM [express] serving on port 5000
+Generating itinerary for Delhi
+Attempting to use Gemini for personalized itinerary...
+Successfully generated personalized itinerary using Gemini 2.5 Flash
+Generated itinerary saved with ID: 1
+2:12:56 PM [express] POST /api/generate-itinerary 200 in 8679ms :: {"id":1,"title":"Delhi Foodie & C…
+Generating itinerary for Delhi
+Attempting to use Gemini for personalized itinerary...
+Successfully generated personalized itinerary using Gemini 2.5 Flash
+Generated itinerary saved with ID: 2
+2:13:29 PM [express] POST /api/generate-itinerary 200 in 8713ms :: {"id":2,"title":"Old Delhi Food &…

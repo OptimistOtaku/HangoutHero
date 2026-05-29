@@ -1,6 +1,6 @@
-import { users, itineraries, type User, type InsertUser, type Itinerary, type InsertItinerary } from "@shared/schema";
+import { users, itineraries, type User, type InsertUser, type Itinerary, type InsertItinerary } from "../shared/schema.js";
 import type { ItineraryResponse } from "../client/src/lib/openai";
-import { db } from "./db";
+import { db } from "./db.js";
 import { eq } from "drizzle-orm";
 
 // modify the interface with any CRUD methods

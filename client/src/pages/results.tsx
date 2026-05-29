@@ -163,7 +163,7 @@ export default function Results() {
           <Card className="overflow-hidden rounded-3xl border border-[rgba(244,208,63,0.45)] bg-white/88 p-6 shadow-[0_24px_60px_rgba(255,56,92,0.08)] md:p-8">
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
               <div>
-                <p className="text-sm font-bold uppercase text-primary">Generated itinerary</p>
+                <p className="text-sm font-bold uppercase text-primary">Your HangoutHero Route</p>
                 <h1 className="mt-4 font-heading text-5xl leading-none text-[#111318] md:text-6xl">
                   {itinerary.title}
                 </h1>
@@ -206,7 +206,7 @@ export default function Results() {
                   <p className="text-xs font-bold uppercase text-slate-500">Destination</p>
                   <p className="mt-3 font-heading text-3xl leading-none text-[#111318]">{itinerary.location}</p>
                   <p className="mt-3 text-sm leading-7 text-slate-600">
-                    Built from your selected mood, transport preferences, and travel distance.
+                    Tuned around your selected mood, transport preferences, and travel distance.
                   </p>
                 </div>
               </div>
@@ -219,9 +219,9 @@ export default function Results() {
 
           <Card className="rounded-3xl border border-[rgba(244,208,63,0.45)] bg-white/88 p-6 shadow-[0_24px_60px_rgba(255,56,92,0.08)] md:p-8">
             <div className="mb-8">
-              <p className="text-sm font-bold uppercase text-primary">Timeline</p>
+              <p className="text-sm font-bold uppercase text-primary">Route Timeline</p>
               <h2 className="mt-4 font-heading text-4xl leading-none text-[#111318] md:text-5xl">
-                Your day, sequenced
+                Your day, in order
               </h2>
             </div>
             <ItineraryTimeline activities={itinerary.activities} />
@@ -230,9 +230,9 @@ export default function Results() {
           {itinerary.recommendations?.length > 0 && (
             <div>
               <div className="mb-6">
-                <p className="text-sm font-bold uppercase text-primary">More ideas</p>
+                <p className="text-sm font-bold uppercase text-primary">Next Route Ideas</p>
                 <h2 className="mt-4 font-heading text-4xl leading-none text-[#111318] md:text-5xl">
-                  Similar adventures you might like
+                  Keep the plan going
                 </h2>
               </div>
               <div className="grid gap-6 md:grid-cols-3">
@@ -251,7 +251,7 @@ export default function Results() {
                 setLocation("/");
               }}
             >
-              Plan another adventure
+              Plan Another Hangout
             </Button>
           </div>
         </motion.div>
