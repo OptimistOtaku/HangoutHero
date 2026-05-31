@@ -6,5 +6,12 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
-
 .vercel
+
+# Log files
+*.log
+dev-server.out.log
+dev-server.err.log
+
+# Agent tools & skills
+.agents/

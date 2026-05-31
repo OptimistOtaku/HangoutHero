@@ -135,6 +135,119 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/place-suggestions", async (req: Request, res: Response) => {
+    const input = String(req.query.input || "").trim();
+    if (!input) {
+      return res.json([]);
+    }
+
+    const FALLBACK_CITIES = [
+      { text: "Delhi, India", placeId: "ch1" },
+      { text: "Noida, Uttar Pradesh, India", placeId: "ch2" },
+      { text: "Jaipur, Rajasthan, India", placeId: "ch3" },
+      { text: "Mussoorie, Uttarakhand, India", placeId: "ch4" },
+      { text: "Mumbai, Maharashtra, India", placeId: "ch5" },
+      { text: "Bangalore, Karnataka, India", placeId: "ch6" },
+      { text: "Pune, Maharashtra, India", placeId: "ch7" },
+      { text: "Goa, India", placeId: "ch8" },
+      { text: "Agra, Uttar Pradesh, India", placeId: "ch9" },
+      { text: "Shimla, Himachal Pradesh, India", placeId: "ch10" },
+      { text: "Manali, Himachal Pradesh, India", placeId: "ch11" },
+      { text: "Dehradun, Uttarakhand, India", placeId: "ch12" },
+      { text: "Kolkata, West Bengal, India", placeId: "ch13" },
+      { text: "Hyderabad, Telangana, India", placeId: "ch14" },
+      { text: "Chennai, Tamil Nadu, India", placeId: "ch15" },
+    ];
+
+    const apiKey = getGoogleMapsApiKey();
+    if (!apiKey) {
+      const matching = FALLBACK_CITIES.filter(c => 
+        c.text.toLowerCase().includes(input.toLowerCase())
+      );
+      return res.json(matching);
+    }
+
+    try {
+      const response = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+        },
+        body: JSON.stringify({
+          input,
+          includedPrimaryTypes: ["(cities)"],
+          regionCode: "IN",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Google Autocomplete failed with ${response.status}`);
+      }
+
+      const data = await response.json();
+      const suggestions = (data.suggestions || []).map((s: any) => ({
+        text: s.placePrediction?.text?.text || "",
+        placeId: s.placePrediction?.placeId || "",
+      }));
+
+      const merged = [
+        ...suggestions,
+        ...FALLBACK_CITIES.filter(c => 
+          c.text.toLowerCase().includes(input.toLowerCase()) &&
+          !suggestions.some((s: any) => s.text.toLowerCase().includes(c.text.toLowerCase()))
+        )
+      ];
+
+      res.json(merged);
+    } catch (error) {
+      console.error("Error fetching place suggestions:", error);
+      const matching = FALLBACK_CITIES.filter(c => 
+        c.text.toLowerCase().includes(input.toLowerCase())
+      );
+      res.json(matching);
+    }
+  });
+
+  app.post("/api/auth/sync", async (req: Request, res: Response) => {
+    try {
+      const { firebaseUid, username, email } = req.body;
+
+      if (!firebaseUid) {
+        return res.status(400).json({ message: "Firebase UID is required" });
+      }
+
+      const lookupName = email || username || `user_${firebaseUid.slice(0, 5)}`;
+      let user = await storage.getUserByUsername(lookupName);
+
+      if (!user) {
+        user = await storage.createUser({
+          username: lookupName,
+          password: firebaseUid,
+        });
+        console.log("Created database user for Firebase session:", user.id);
+      } else {
+        if (user.password !== firebaseUid) {
+          user = await storage.createUser({
+            username: `${lookupName}_${firebaseUid.slice(0, 4)}`,
+            password: firebaseUid,
+          });
+          console.log("Created user with distinct username suffix:", user.id);
+        } else {
+          console.log("Synced existing user for Firebase session:", user.id);
+        }
+      }
+
+      res.json({
+        id: user.id,
+        username: user.username,
+      });
+    } catch (error) {
+      console.error("Auth sync error:", error);
+      res.status(500).json({ message: "Failed to synchronize user session" });
+    }
+  });
+
   // API endpoint to generate an itinerary
   app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
     try {
@@ -818,13 +931,14 @@ Return only valid JSON without any markdown formatting or code blocks.`;
   // API endpoint to save an itinerary (explicit save action)
   app.post("/api/save-itinerary", async (req: Request, res: Response) => {
     try {
-      const { itinerary } = req.body;
+      const { itinerary, userId } = req.body;
       
       console.log("Save itinerary request received:", { 
         hasItinerary: !!itinerary,
         hasTitle: !!itinerary?.title,
         hasLocation: !!itinerary?.location,
-        hasId: !!itinerary?.id
+        hasId: !!itinerary?.id,
+        userId: userId
       });
       
       if (!itinerary || !itinerary.title || !itinerary.location) {
@@ -846,9 +960,9 @@ Return only valid JSON without any markdown formatting or code blocks.`;
       // Remove id if present (we'll create a new save entry)
       const { id, ...itineraryWithoutId } = itinerary;
       
-      const savedItinerary = await storage.saveItinerary(itineraryWithoutId);
+      const savedItinerary = await storage.saveItinerary(itineraryWithoutId, userId ? Number(userId) : undefined);
       
-      console.log("Itinerary saved successfully with ID:", savedItinerary.id);
+      console.log("Itinerary saved successfully with ID:", savedItinerary.id, "for user:", userId);
       
       res.json({
         id: savedItinerary.id,
@@ -862,6 +976,33 @@ Return only valid JSON without any markdown formatting or code blocks.`;
         message: "Failed to save itinerary. Please try again.",
         error: errorMessage
       });
+    }
+  });
+
+  app.get("/api/user/itineraries/:userId", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const userItineraries = await storage.getAllItineraries(userId);
+      
+      const formatted = userItineraries.map(it => ({
+        id: it.id,
+        title: it.title,
+        description: it.description,
+        location: it.location,
+        activities: it.activities as any,
+        recommendations: it.recommendations as any,
+        createdAt: it.createdAt,
+      }));
+
+      res.json(formatted);
+    } catch (error) {
+      console.error("Error retrieving user itineraries:", error);
+      res.status(500).json({ message: "Failed to retrieve saved itineraries. Please try again." });
     }
   });
 

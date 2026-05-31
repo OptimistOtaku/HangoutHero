@@ -62,11 +62,13 @@ export async function generateItinerary(
 }
 
 export async function saveItinerary(
-  itinerary: ItineraryResponse
+  itinerary: ItineraryResponse,
+  userId?: number
 ): Promise<{ id: number; message: string }> {
   try {
     const response = await apiRequest("POST", "/api/save-itinerary", {
       itinerary,
+      userId,
     });
     const data = await response.json();
     return data;

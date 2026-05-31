@@ -1,18 +1,20 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import * as schema from "../shared/schema.js";
-import ws from "ws";
 
-// Configure WebSocket for Neon serverless (needed for Node.js)
-if (typeof WebSocket === "undefined") {
-  neonConfig.webSocketConstructor = ws;
+const connectionString = process.env.DATABASE_URL;
+
+let pool: pg.Pool | null = null;
+
+if (connectionString) {
+  pool = new pg.Pool({
+    connectionString,
+    // Add SSL support required for cloud hosted databases like Supabase or Neon
+    ssl: connectionString.includes("localhost") || connectionString.includes("127.0.0.1")
+      ? false
+      : { rejectUnauthorized: false }
+  });
 }
 
-// Create a connection pool only if DATABASE_URL is set
-let pool: Pool | null = null;
-if (process.env.DATABASE_URL) {
-  pool = new Pool({ connectionString: process.env.DATABASE_URL });
-}
-
-// Create Drizzle instance (will be null if no DATABASE_URL)
+// Export the Drizzle connection instance
 export const db = pool ? drizzle(pool, { schema }) : null;

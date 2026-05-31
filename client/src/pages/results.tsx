@@ -10,6 +10,14 @@ import { ItineraryResponse, saveItinerary } from "@/lib/openai";
 import { GoogleMap } from "@/components/ui/google-map";
 import { WeatherWidget } from "@/components/ui/weather-widget";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function Results() {
   const { toast } = useToast();
@@ -67,13 +75,16 @@ export default function Results() {
     loadItinerary();
   }, [setLocation, toast]);
 
+  const { user, loginWithGoogle } = useAuth();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   const persistItinerary = async () => {
     if (!itinerary) return null;
     if (itinerary.id) return itinerary.id;
 
     setIsSaving(true);
     try {
-      const result = await saveItinerary(itinerary);
+      const result = await saveItinerary(itinerary, user?.id);
       const updatedItinerary = { ...itinerary, id: result.id };
       setItinerary(updatedItinerary);
       setIsSaved(true);
@@ -120,13 +131,18 @@ export default function Results() {
   const handleSave = async () => {
     if (!itinerary || isSaved) return;
 
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
     try {
       const id = await persistItinerary();
       if (!id) return;
 
       toast({
-        title: "Itinerary saved!",
-        description: "Your itinerary has been saved successfully.",
+        title: "Saved to Profile!",
+        description: "This itinerary is now securely saved in your scrapbook profile.",
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -137,6 +153,22 @@ export default function Results() {
       });
     }
   };
+
+  const handleLoginAndSave = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Automatically save if user logs in via the prompt and itinerary is not yet saved
+  useEffect(() => {
+    if (user && showLoginPrompt && itinerary && !isSaved) {
+      setShowLoginPrompt(false);
+      handleSave();
+    }
+  }, [user, showLoginPrompt, itinerary, isSaved]);
 
   if (isLoading || !itinerary) {
     return (
@@ -255,6 +287,42 @@ export default function Results() {
             </Button>
           </div>
         </motion.div>
+
+        <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
+          <DialogContent className="rounded-3xl border border-[rgba(244,208,63,0.45)] bg-[rgba(255,250,242,0.98)] p-6 shadow-2xl backdrop-blur-md max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="font-heading text-3xl font-extrabold text-[#111318] text-center flex flex-col items-center gap-3">
+                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-lg">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                  </svg>
+                </div>
+                Save to profile
+              </DialogTitle>
+              <DialogDescription className="text-center text-slate-600 text-sm leading-relaxed mt-4">
+                Authenticate with Google to permanently preserve this personalized hangout route, track your past explorations, and access them from any device.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-6 flex flex-col gap-3">
+              <Button
+                onClick={handleLoginAndSave}
+                className="h-12 rounded-full bg-primary font-bold text-white hover:bg-[#ff5977] text-sm flex items-center justify-center gap-3 shadow-md"
+              >
+                <svg className="h-5 w-5 fill-white" viewBox="0 0 24 24">
+                  <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.1-5.136 4.1A5.69 5.69 0 018.25 12.8a5.69 5.69 0 015.741-5.7 5.6 5.6 0 013.9 1.505l3.19-3.19A9.914 9.914 0 0013.99 2.25c-5.52 0-10 4.48-10 10s4.48 10 10 10c5.77 0 10.02-4.06 10.02-10.18 0-.68-.061-1.33-.18-1.785H12.24z" />
+                </svg>
+                Sign in with Google
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowLoginPrompt(false)}
+                className="h-11 rounded-full border-slate-300 bg-white font-semibold text-slate-700 hover:border-primary text-xs"
+              >
+                Cancel
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </section>
   );
