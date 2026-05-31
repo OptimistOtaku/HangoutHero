@@ -128,7 +128,7 @@ export default function Home() {
     <div className="relative overflow-hidden">
       <section
         ref={heroRef}
-        className="scrapbook-hero relative mx-auto grid min-h-[calc(100vh-86px)] max-w-7xl items-center gap-10 px-4 pb-12 pt-8 md:px-8 lg:grid-cols-[0.94fr_1.06fr] lg:py-12"
+        className="scrapbook-hero relative mx-auto grid max-w-7xl items-center gap-7 px-4 pb-10 pt-7 md:min-h-[calc(100vh-86px)] md:px-8 lg:grid-cols-[0.94fr_1.06fr] lg:gap-10 lg:py-12"
       >
         <div className="max-w-3xl">
           <div className="gsap-reveal label-chip w-fit">
@@ -136,16 +136,16 @@ export default function Home() {
             HangoutHero
           </div>
 
-          <h1 className="gsap-reveal mt-7 max-w-[12ch] font-heading text-[3.25rem] font-extrabold leading-[0.92] text-[#111318] md:text-[5.2rem] xl:text-[6.35rem]">
+          <h1 className="gsap-reveal mt-5 max-w-[12ch] font-heading text-[clamp(3.05rem,15vw,4.4rem)] font-extrabold leading-[0.9] text-[#111318] md:mt-7 md:text-[5.2rem] xl:text-[6.35rem]">
             Plan the day.
             <span className="block text-primary">Keep the story.</span>
           </h1>
 
-          <p className="gsap-reveal mt-6 max-w-2xl text-lg leading-8 text-slate-600 md:text-xl">
+          <p className="gsap-reveal mt-5 max-w-2xl text-base leading-7 text-slate-600 md:mt-6 md:text-xl md:leading-8">
             HangoutHero turns a mood, a city, and a few practical choices into a real-world hangout route with mapped stops, live weather, and scrapbook-style place cards.
           </p>
 
-          <div className="gsap-reveal mt-7 flex flex-wrap gap-2">
+          <div className="gsap-reveal mt-6 flex flex-wrap gap-2 md:mt-7">
             {heroNotes.map((note) => (
               <span key={note} className="hero-note rounded-[10px] border border-[rgba(244,208,63,0.5)] bg-white/80 px-4 py-2 text-sm font-bold text-[#26303a] shadow-[0_10px_24px_rgba(94,71,45,0.07)]">
                 {note}
@@ -153,10 +153,10 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="gsap-reveal mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="gsap-reveal mt-7 flex flex-col gap-3 sm:flex-row sm:items-center md:mt-9">
             <Button
               asChild
-              className="h-14 rounded-[12px] bg-primary px-8 text-base font-extrabold text-white shadow-[0_18px_34px_rgba(255,56,92,0.22)] hover:bg-[#ff5977]"
+              className="h-14 w-full rounded-[12px] bg-primary px-8 text-base font-extrabold text-white shadow-[0_18px_34px_rgba(255,56,92,0.22)] hover:bg-[#ff5977] sm:w-auto"
             >
               <Link href="/questionnaire">
                 Build My Hangout
@@ -166,7 +166,7 @@ export default function Home() {
             <a href="#journey-styles">
               <Button
                 variant="outline"
-                className="h-14 rounded-[12px] border-[1.5px] border-slate-300 bg-white/76 px-8 text-base font-bold text-slate-700 hover:border-primary hover:bg-white"
+                className="h-14 w-full rounded-[12px] border-[1.5px] border-slate-300 bg-white/76 px-8 text-base font-bold text-slate-700 hover:border-primary hover:bg-white sm:w-auto"
               >
                 See Sample Routes
               </Button>
@@ -174,8 +174,8 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="relative mx-auto min-h-[560px] w-full max-w-[760px]">
-          <div className="hero-polaroid absolute left-[4%] top-[24%] z-0">
+        <div className="relative mx-auto min-h-[390px] w-full max-w-[760px] sm:min-h-[470px] lg:min-h-[560px]">
+          <div className="hero-polaroid absolute -left-5 top-[25%] z-0 scale-[0.72] sm:left-[4%] sm:scale-90 lg:scale-100">
             <ScrapbookImage
               polaroid
               rotation={-8}
@@ -184,7 +184,7 @@ export default function Home() {
               caption={`${previousPlace.name}`}
             />
           </div>
-          <div className="hero-polaroid absolute left-[25%] top-[2%] z-10">
+          <div className="hero-polaroid absolute left-1/2 top-0 z-10 -translate-x-1/2 scale-[0.88] sm:left-[25%] sm:translate-x-0 sm:scale-95 lg:scale-100">
             <ScrapbookImage
               polaroid
               priority
@@ -194,7 +194,7 @@ export default function Home() {
               caption={`${activePlace.name}`}
             />
           </div>
-          <div className="hero-polaroid absolute left-[50%] top-[25%] z-0">
+          <div className="hero-polaroid absolute -right-7 top-[26%] z-0 scale-[0.72] sm:left-[50%] sm:right-auto sm:scale-90 lg:scale-100">
             <ScrapbookImage
               polaroid
               rotation={8}
@@ -204,12 +204,12 @@ export default function Home() {
             />
           </div>
 
-          <div className="hero-note scrapbook-note absolute bottom-6 left-0 max-w-sm p-6">
+          <div className="hero-note scrapbook-note absolute bottom-0 left-0 right-0 mx-auto max-w-[21rem] p-5 sm:left-0 sm:right-auto sm:max-w-sm sm:p-6 lg:bottom-6">
             <div className="label-chip inline-flex">
               <Camera className="mr-2 h-4 w-4" />
               live route preview
             </div>
-            <h2 className="mt-4 font-heading text-4xl font-extrabold leading-none text-[#111318]">
+            <h2 className="mt-4 font-heading text-3xl font-extrabold leading-none text-[#111318] sm:text-4xl">
               {activePlace.name}
             </h2>
             <p className="mt-3 text-sm leading-7 text-slate-600">{activePlace.tagline}</p>
@@ -218,15 +218,15 @@ export default function Home() {
       </section>
 
       <section id="how-it-works" className="page-shell">
-        <div className="editorial-card p-6 md:p-10">
+        <div className="editorial-card p-5 md:p-10">
           <div className="max-w-3xl">
             <div className="label-chip">How It Works</div>
-            <h2 className="mt-6 font-heading text-4xl font-extrabold leading-none text-[#111318] md:text-6xl">
+            <h2 className="mt-5 font-heading text-[2.35rem] font-extrabold leading-[0.95] text-[#111318] md:mt-6 md:text-6xl">
               From group chat chaos
               <br />
               to one ready route.
             </h2>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
+            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 md:mt-5 md:text-lg md:leading-8">
               The product does the annoying planning work: it reads the vibe, builds a sequence, and gives you a day plan people can actually follow.
             </p>
           </div>
@@ -238,7 +238,7 @@ export default function Home() {
               return (
                 <article
                   key={item.title}
-                  className="rounded-[12px] border border-[rgba(244,208,63,0.42)] bg-[rgba(255,255,255,0.82)] p-6 shadow-[0_14px_28px_rgba(94,71,45,0.06)]"
+                  className="rounded-[12px] border border-[rgba(244,208,63,0.42)] bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_14px_28px_rgba(94,71,45,0.06)] md:p-6"
                 >
                   <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-[10px] bg-primary text-white shadow-[0_10px_24px_rgba(255,56,92,0.18)]">
                     <Icon className="h-5 w-5" />
@@ -255,7 +255,7 @@ export default function Home() {
       <section id="journey-styles" className="page-shell pt-2">
         <div className="mb-6">
           <div className="label-chip">Sample Routes</div>
-          <h2 className="mt-6 font-heading text-4xl font-extrabold leading-none text-[#111318] md:text-6xl">
+          <h2 className="mt-5 font-heading text-[2.35rem] font-extrabold leading-[0.95] text-[#111318] md:mt-6 md:text-6xl">
             Pick a city.
             <br />
             Start with a mood.
@@ -265,9 +265,9 @@ export default function Home() {
         <Carousel className="w-full">
           <CarouselContent className="-ml-4">
             {CITY_CARDS.map((place) => (
-              <CarouselItem key={place.name} className="pl-4 md:basis-1/2 xl:basis-1/3">
+              <CarouselItem key={place.name} className="pl-4 basis-[86%] sm:basis-[68%] md:basis-1/2 xl:basis-1/3">
                 <article className="overflow-hidden rounded-[14px] border border-[rgba(244,208,63,0.42)] bg-white/82 shadow-[0_18px_40px_rgba(255,56,92,0.07)]">
-                  <div className="relative h-80">
+                  <div className="relative h-72 md:h-80">
                     <ScrapbookImage src={place.image} alt={`${place.name} route preview`} className="h-full w-full" />
                     <div className="absolute inset-0 bg-gradient-to-t from-[rgba(18,22,29,0.82)] via-[rgba(18,22,29,0.12)] to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
@@ -286,22 +286,22 @@ export default function Home() {
       </section>
 
       <section id="why-hangouthero" className="page-shell pt-4">
-        <div className="rounded-[14px] bg-[#111318] px-8 py-10 text-white shadow-[0_28px_60px_rgba(17,19,24,0.22)] md:px-10">
+        <div className="rounded-[14px] bg-[#111318] px-5 py-8 text-white shadow-[0_28px_60px_rgba(17,19,24,0.22)] md:px-10 md:py-10">
           <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
-              <p className="font-scrap text-4xl leading-none text-[#fff09b]">built for actual plans</p>
-              <h2 className="mt-4 font-heading text-4xl font-extrabold leading-none md:text-6xl">
+              <p className="font-scrap text-3xl leading-none text-[#fff09b] md:text-4xl">built for actual plans</p>
+              <h2 className="mt-4 font-heading text-[2.35rem] font-extrabold leading-[0.95] md:text-6xl">
                 Less “where should we go?”
                 <br />
                 More “send the route.”
               </h2>
-              <p className="mt-5 text-lg leading-8 text-white/74">
+              <p className="mt-5 text-base leading-7 text-white/74 md:text-lg md:leading-8">
                 HangoutHero is a planning product, not a demo page: generate, inspect, map, save, and share the day in one flow.
               </p>
             </div>
             <Button
               asChild
-              className="h-14 rounded-[12px] bg-primary px-8 text-base font-extrabold text-white hover:bg-[#ff5977]"
+              className="h-14 w-full rounded-[12px] bg-primary px-8 text-base font-extrabold text-white hover:bg-[#ff5977] md:w-auto"
             >
               <Link href="/questionnaire">Build My Route</Link>
             </Button>

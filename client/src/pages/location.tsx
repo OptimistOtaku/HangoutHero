@@ -60,7 +60,7 @@ export default function Location() {
   };
 
   return (
-    <section className="relative mx-auto max-w-7xl px-4 py-8 md:px-8">
+    <section className="relative mx-auto max-w-7xl px-3 py-5 md:px-8 md:py-8">
       <div className="relative mx-auto max-w-5xl">
         <ProgressSteps currentStep={2} />
 
@@ -68,31 +68,31 @@ export default function Location() {
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="mt-8"
+          className="mt-5 md:mt-8"
         >
-          <Card className="overflow-hidden rounded-3xl border border-[rgba(244,208,63,0.45)] bg-white/85 shadow-[0_24px_60px_rgba(255,56,92,0.08)]">
-            <CardContent className="p-6 md:p-10">
+          <Card className="overflow-hidden rounded-[22px] border border-[rgba(244,208,63,0.45)] bg-white/85 shadow-[0_24px_60px_rgba(255,56,92,0.08)] md:rounded-3xl">
+            <CardContent className="p-4 md:p-10">
               <div className="max-w-3xl">
                 <p className="text-sm font-bold uppercase text-primary">Location</p>
-                <h1 className="mt-4 font-heading text-5xl leading-none text-[#111318] md:text-6xl">
+                <h1 className="mt-3 font-heading text-[2.45rem] font-extrabold leading-[0.95] text-[#111318] md:mt-4 md:text-6xl">
                   Where should this itinerary happen?
                 </h1>
-                <p className="mt-4 text-lg leading-8 text-slate-600">
+                <p className="mt-4 text-base leading-7 text-slate-600 md:text-lg md:leading-8">
                   Choose a city, or type your own area. We’ll keep the plan tuned to travel range and transport.
                 </p>
               </div>
 
-              <div className="mt-8">
+              <div className="mt-7 md:mt-8">
                 <Input
                   type="text"
                   placeholder="Enter a city or neighborhood"
-                  className="h-14 rounded-full border-slate-300 bg-white px-6 text-lg"
+                  className="h-[3.25rem] rounded-full border-slate-300 bg-white px-5 text-base md:h-14 md:px-6 md:text-lg"
                   value={locationData.location}
                   onChange={(e) => setLocationData((prev) => ({ ...prev, location: e.target.value }))}
                 />
               </div>
 
-              <div className="mt-8 grid gap-4 md:grid-cols-4">
+              <div className="mt-7 grid grid-cols-2 gap-3 md:mt-8 md:grid-cols-4 md:gap-4">
                 {locations.map((location, index) => (
                   <motion.button
                     key={location.name}
@@ -106,31 +106,31 @@ export default function Location() {
                         prev.map((item) => ({ ...item, selected: item.name === location.name }))
                       );
                     }}
-                    className={`group overflow-hidden rounded-3xl border text-left transition-all ${
+                    className={`group overflow-hidden rounded-[20px] border text-left transition-all md:rounded-3xl ${
                       location.selected
                         ? "border-primary shadow-[0_18px_38px_rgba(255,56,92,0.14)]"
                         : "border-[rgba(244,208,63,0.45)] shadow-[0_8px_20px_rgba(16,24,40,0.04)]"
                     }`}
                   >
-                    <div className="relative h-40">
+                    <div className="relative h-32 md:h-40">
                       <ScrapbookImage src={location.image} alt={location.name} className="h-full w-full" />
                       <div className={`absolute inset-0 ${location.selected ? "bg-primary/25" : "bg-black/30"} transition-colors group-hover:bg-black/20`} />
                       <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                        <p className="font-heading text-3xl leading-none">{location.name}</p>
+                        <p className="font-heading text-2xl leading-none md:text-3xl">{location.name}</p>
                       </div>
                     </div>
                   </motion.button>
                 ))}
               </div>
 
-              <div className="mt-10 grid gap-6 lg:grid-cols-2">
-                <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-[rgba(255,249,239,0.72)] p-6">
+              <div className="mt-7 grid gap-4 md:mt-10 lg:grid-cols-2 lg:gap-6">
+                <div className="rounded-[20px] border border-[rgba(244,208,63,0.4)] bg-[rgba(255,249,239,0.72)] p-4 md:rounded-3xl md:p-6">
                   <p className="mb-3 text-sm font-semibold uppercase text-slate-500">Distance</p>
                   <Select
                     value={locationData.distance}
                     onValueChange={(value) => setLocationData((prev) => ({ ...prev, distance: value }))}
                   >
-                    <SelectTrigger className="h-14 rounded-2xl border-slate-300 bg-white text-base">
+                    <SelectTrigger className="h-[3.25rem] rounded-2xl border-slate-300 bg-white text-base md:h-14">
                       <SelectValue placeholder="Select distance" />
                     </SelectTrigger>
                     <SelectContent>
@@ -141,7 +141,7 @@ export default function Location() {
                   </Select>
                 </div>
 
-                <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white p-6">
+                <div className="rounded-[20px] border border-[rgba(244,208,63,0.4)] bg-white p-4 md:rounded-3xl md:p-6">
                   <p className="mb-3 text-sm font-semibold uppercase text-slate-500">Transport</p>
                   <div className="flex flex-wrap gap-3">
                     {["Walking", "Public Transit", "Rideshare", "Driving"].map((type) => {
@@ -151,7 +151,7 @@ export default function Location() {
                           key={type}
                           type="button"
                           variant={active ? "default" : "outline"}
-                          className={`rounded-full px-5 ${
+                          className={`h-11 flex-1 rounded-full px-4 text-sm sm:flex-none md:px-5 ${
                             active
                               ? "bg-primary text-white hover:bg-[#ff5977]"
                               : "border-slate-300 bg-white text-slate-700 hover:border-primary"
@@ -173,7 +173,7 @@ export default function Location() {
                 </div>
               </div>
 
-              <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-between">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-between md:mt-10">
                 <Button
                   variant="outline"
                   className="h-14 rounded-full border-slate-300 bg-white px-8 text-base font-semibold text-slate-700 hover:border-primary"
@@ -182,7 +182,7 @@ export default function Location() {
                   Back
                 </Button>
                 <Button
-                  className="h-14 rounded-full bg-primary px-10 text-lg font-bold text-white hover:bg-[#ff5977]"
+                  className="h-14 rounded-full bg-primary px-10 text-base font-bold text-white hover:bg-[#ff5977] md:text-lg"
                   onClick={handleGenerate}
                 >
                   Generate itinerary

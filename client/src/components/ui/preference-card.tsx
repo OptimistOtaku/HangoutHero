@@ -40,29 +40,29 @@ export function PreferenceCard({
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.99 }}
       onClick={onClick}
-      className={`relative w-full overflow-hidden rounded-3xl border p-6 text-left transition-all ${
+      className={`relative w-full overflow-hidden rounded-[20px] border p-4 text-left transition-all md:rounded-3xl md:p-6 ${
         selected
           ? "border-primary bg-[rgba(255,56,92,0.06)] shadow-[0_18px_38px_rgba(255,56,92,0.12)]"
           : "border-[rgba(244,208,63,0.4)] bg-white shadow-[0_10px_24px_rgba(16,24,40,0.04)] hover:border-primary/40"
       }`}
     >
-      <div className="absolute left-4 top-3 h-4 w-10 rotate-[-10deg] rounded-sm bg-[#fff09b]" />
+      <div className="absolute left-4 top-3 h-3 w-9 rotate-[-10deg] rounded-sm bg-[#fff09b] md:h-4 md:w-10" />
       {selected && (
         <div className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs text-white">
           <Check className="h-4 w-4" />
         </div>
       )}
 
-      <div className="relative flex items-start gap-4">
-        <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-md ${colorMap[color] || "bg-primary"}`}>
+      <div className="relative flex items-start gap-3 md:gap-4">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[15px] text-white shadow-md md:h-14 md:w-14 md:rounded-2xl ${colorMap[color] || "bg-primary"}`}>
           {(() => {
             const Icon = iconMap[icon] || Compass;
-            return <Icon className="h-6 w-6" />;
+            return <Icon className="h-5 w-5 md:h-6 md:w-6" />;
           })()}
         </div>
         <div>
-          <h3 className="font-heading text-2xl leading-none text-[#111318]">{title}</h3>
-          <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+          <h3 className="font-heading text-[1.35rem] leading-none text-[#111318] md:text-2xl">{title}</h3>
+          <p className="mt-2 text-sm leading-6 text-slate-600 md:mt-3">{description}</p>
         </div>
       </div>
     </motion.button>

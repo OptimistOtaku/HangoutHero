@@ -221,7 +221,7 @@ export function GoogleMap({ activities, location }: GoogleMapProps) {
 
   if (!isScriptLoaded) {
     return (
-      <div className="w-full h-72 md:h-96 bg-gray-100 rounded-xl flex items-center justify-center">
+      <div className="flex h-80 w-full items-center justify-center rounded-[18px] bg-gray-100 md:h-96 md:rounded-xl">
         <div className="text-center">
           <i className="fas fa-spinner fa-spin text-primary text-2xl mb-2"></i>
           <p className="text-gray-600">Loading map...</p>
@@ -232,15 +232,15 @@ export function GoogleMap({ activities, location }: GoogleMapProps) {
 
   return (
     <div className="relative">
-      <div ref={mapRef} className="w-full h-72 md:h-96 rounded-xl" />
+      <div ref={mapRef} className="h-80 w-full rounded-[18px] md:h-96 md:rounded-xl" />
 
       {/* Map controls */}
-      <div className="absolute bottom-4 left-4 flex gap-2">
+      <div className="absolute bottom-3 left-3 flex gap-2 md:bottom-4 md:left-4">
         <Button
           variant="secondary"
           size="sm"
           onClick={showRoute ? clearRoute : showDirections}
-          className="bg-white/90 backdrop-blur-sm shadow-lg"
+          className="h-10 rounded-full bg-white/92 text-xs font-bold shadow-lg backdrop-blur-sm md:text-sm"
         >
           <i className={`fas fa-${showRoute ? "times" : "route"} mr-2`}></i>
           {showRoute ? "Hide Route" : "Show Route"}
@@ -248,12 +248,12 @@ export function GoogleMap({ activities, location }: GoogleMapProps) {
       </div>
 
       {/* Legend */}
-      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-        <div className="flex items-center gap-2 text-sm">
+      <div className="absolute right-3 top-3 rounded-xl bg-white/90 p-2 shadow-lg backdrop-blur-sm md:right-4 md:top-4 md:p-3">
+        <div className="flex items-center gap-2 text-xs md:text-sm">
           <div className="w-4 h-4 rounded-full bg-[#FF385C] border-2 border-white"></div>
           <span className="text-gray-700">Activities</span>
         </div>
-        <div className="flex items-center gap-2 text-sm mt-1">
+        <div className="mt-1 flex items-center gap-2 text-xs md:text-sm">
           <div className="w-6 h-1 bg-[#FF385C]"></div>
           <span className="text-gray-700">Route</span>
         </div>

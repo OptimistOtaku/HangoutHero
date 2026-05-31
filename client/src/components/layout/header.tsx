@@ -28,21 +28,21 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[rgba(244,208,63,0.42)] bg-[rgba(255,250,242,0.9)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 md:px-8">
+    <header className="sticky top-0 z-40 border-b border-[rgba(244,208,63,0.42)] bg-[rgba(255,250,242,0.92)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 md:px-8 md:py-4">
         <Link href="/">
-          <div className="flex cursor-pointer items-center gap-4" onClick={() => setIsMenuOpen(false)}>
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-[0_14px_30px_rgba(255,56,92,0.25)]">
-              <MapPin className="h-6 w-6 fill-white" />
+          <div className="flex cursor-pointer items-center gap-3 md:gap-4" onClick={() => setIsMenuOpen(false)}>
+            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-primary text-white shadow-[0_14px_30px_rgba(255,56,92,0.25)] md:h-14 md:w-14 md:rounded-2xl">
+              <MapPin className="h-5 w-5 fill-white md:h-6 md:w-6" />
               <div className="absolute -right-2 -top-2 rounded-full bg-[#fff1a8] p-1 text-primary">
                 <Sparkles className="h-3.5 w-3.5" />
               </div>
             </div>
             <div>
-              <p className="font-heading text-[1.8rem] font-extrabold leading-none text-[#101218] md:text-[2rem]">
+              <p className="font-heading text-[1.28rem] font-extrabold leading-none text-[#101218] md:text-[2rem]">
                 HangoutHero
               </p>
-              <p className="font-scrap -mt-1 text-2xl leading-none text-[#ff7d9a]">plan it like a page</p>
+              <p className="font-scrap -mt-1 text-[1.22rem] leading-none text-[#ff7d9a] md:text-2xl">plan it like a page</p>
             </div>
           </div>
         </Link>
@@ -89,14 +89,14 @@ export default function Header() {
       </div>
 
       {isMenuOpen && (
-        <div className="border-t border-[rgba(244,208,63,0.42)] bg-[rgba(255,250,242,0.98)] px-4 py-4 md:hidden">
+        <div className="border-t border-[rgba(244,208,63,0.42)] bg-[rgba(255,250,242,0.98)] px-3 py-3 shadow-[0_22px_40px_rgba(94,71,45,0.08)] md:hidden">
           <nav className="flex flex-col gap-2">
             {navItems.map((item) => (
               <button
                 key={item.label}
                 type="button"
                 onClick={() => handleAnchorNav(item.href)}
-                className="rounded-2xl px-4 py-3 text-base font-semibold text-slate-700 hover:bg-white/70"
+                className="rounded-2xl bg-white/54 px-4 py-3 text-left text-base font-semibold text-slate-700 hover:bg-white/80"
               >
                 {item.label}
               </button>

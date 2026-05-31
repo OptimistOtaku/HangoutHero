@@ -58,12 +58,12 @@ export function ActivityCard({ activity, timeOfDay, isLast }: ActivityCardProps)
         timeOfDay === "morning" ? "border-accent/30" :
         timeOfDay === "afternoon" ? "border-primary/30" :
         "border-stone-900/15"
-      } rounded-3xl p-5 md:p-6 ${isLast ? '' : 'mb-6'} transition-all duration-300 shadow-[0_14px_34px_rgba(16,24,40,0.06)] hover:shadow-[0_20px_44px_rgba(255,56,92,0.1)] relative overflow-hidden group`}
+      } rounded-[20px] p-3 md:rounded-3xl md:p-6 ${isLast ? '' : 'mb-5 md:mb-6'} transition-all duration-300 shadow-[0_14px_34px_rgba(16,24,40,0.06)] hover:shadow-[0_20px_44px_rgba(255,56,92,0.1)] relative overflow-hidden group`}
     >
-      <div className="flex flex-col gap-5 md:flex-row">
+      <div className="flex flex-col gap-4 md:flex-row md:gap-5">
         <motion.div
           whileHover={{ scale: 1.05 }}
-          className="relative h-48 w-full overflow-hidden rounded-2xl border border-white shadow-lg md:w-1/3"
+          className="relative h-44 w-full overflow-hidden rounded-2xl border border-white shadow-lg md:h-48 md:w-1/3"
         >
           <ScrapbookImage
             src={activity.image}
@@ -79,11 +79,11 @@ export function ActivityCard({ activity, timeOfDay, isLast }: ActivityCardProps)
             {activity.time}
           </div>
         </motion.div>
-        <div className="w-full md:w-2/3">
+        <div className="w-full min-w-0 md:w-2/3">
           <div className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h4 className="mb-2 font-heading text-xl font-bold text-gray-800 md:text-2xl">{activity.title}</h4>
-              <p className="mb-4 leading-relaxed text-gray-600">{activity.description}</p>
+              <h4 className="mb-2 font-heading text-xl font-bold leading-tight text-gray-800 md:text-2xl">{activity.title}</h4>
+              <p className="mb-3 text-sm leading-6 text-gray-600 md:mb-4 md:text-base md:leading-relaxed">{activity.description}</p>
             </div>
             <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col">
               <motion.span
@@ -102,15 +102,15 @@ export function ActivityCard({ activity, timeOfDay, isLast }: ActivityCardProps)
             </div>
           </div>
           <div className="flex flex-col gap-4 border-t border-gray-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <span className="flex items-center gap-2 text-sm text-gray-700">
-              <MapPin className="h-4 w-4 text-primary" />
-              <span className="font-medium">{activity.location}</span>
+            <span className="flex min-w-0 items-start gap-2 text-sm text-gray-700">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span className="font-medium leading-5">{activity.location}</span>
             </span>
-            <div className="flex gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-3">
               <motion.button
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.9 }}
-                className="w-10 h-10 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
+                className="flex h-11 w-full items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-white sm:h-10 sm:w-10"
                 onClick={handleDirection}
                 title="Get directions"
                 aria-label="Get directions"
@@ -120,7 +120,7 @@ export function ActivityCard({ activity, timeOfDay, isLast }: ActivityCardProps)
               <motion.button
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.9 }}
-                className="w-10 h-10 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
+                className="flex h-11 w-full items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-white sm:h-10 sm:w-10"
                 onClick={handleLink}
                 title="Search activity"
                 aria-label="Search activity"
@@ -130,7 +130,7 @@ export function ActivityCard({ activity, timeOfDay, isLast }: ActivityCardProps)
               <motion.button
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.9 }}
-                className="w-10 h-10 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
+                className="flex h-11 w-full items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-white sm:h-10 sm:w-10"
                 onClick={handleBookmark}
                 title="Bookmark"
                 aria-label="Bookmark"

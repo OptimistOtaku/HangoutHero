@@ -150,7 +150,7 @@ export default function Results() {
   }
 
   return (
-    <section className="relative mx-auto max-w-7xl px-4 py-8 md:px-8">
+    <section className="relative mx-auto max-w-7xl px-3 py-5 md:px-8 md:py-8">
       <div className="mx-auto max-w-6xl">
         <ProgressSteps currentStep={3} />
 
@@ -158,30 +158,30 @@ export default function Results() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="mt-8 grid gap-8"
+          className="mt-5 grid gap-5 md:mt-8 md:gap-8"
         >
-          <Card className="overflow-hidden rounded-3xl border border-[rgba(244,208,63,0.45)] bg-white/88 p-6 shadow-[0_24px_60px_rgba(255,56,92,0.08)] md:p-8">
+          <Card className="overflow-hidden rounded-[22px] border border-[rgba(244,208,63,0.45)] bg-white/88 p-4 shadow-[0_24px_60px_rgba(255,56,92,0.08)] md:rounded-3xl md:p-8">
             <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
               <div>
                 <p className="text-sm font-bold uppercase text-primary">Your HangoutHero Route</p>
-                <h1 className="mt-4 font-heading text-5xl leading-none text-[#111318] md:text-6xl">
+                <h1 className="mt-3 font-heading text-[2.45rem] font-extrabold leading-[0.95] text-[#111318] md:mt-4 md:text-6xl">
                   {itinerary.title}
                 </h1>
-                <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
+                <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600 md:text-lg md:leading-8">
                   {itinerary.description}
                 </p>
 
-                <div className="mt-8 flex flex-wrap gap-3">
+                <div className="mt-6 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3 md:mt-8">
                   <Button
                     variant="outline"
-                    className="rounded-full border-slate-300 bg-white px-5 text-base font-semibold text-slate-700 hover:border-primary"
+                    className="rounded-full border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:border-primary sm:px-5 sm:text-base"
                     onClick={handleShare}
                   >
                     Share
                   </Button>
                   <Button
                     variant="outline"
-                    className={`rounded-full px-5 text-base font-semibold ${
+                    className={`rounded-full px-3 text-sm font-semibold sm:px-5 sm:text-base ${
                       isSaved
                         ? "border-green-500 bg-green-50 text-green-700 hover:border-green-600"
                         : "border-slate-300 bg-white text-slate-700 hover:border-primary"
@@ -192,7 +192,7 @@ export default function Results() {
                     {isSaving ? "Saving..." : isSaved ? "Saved" : "Save"}
                   </Button>
                   <Button
-                    className="rounded-full bg-primary px-5 text-base font-semibold text-white hover:bg-[#ff5977]"
+                    className="rounded-full bg-primary px-3 text-sm font-semibold text-white hover:bg-[#ff5977] sm:px-5 sm:text-base"
                     onClick={() => setLocation("/questionnaire")}
                   >
                     Customize
@@ -202,9 +202,9 @@ export default function Results() {
 
               <div className="grid gap-4">
                 <WeatherWidget location={itinerary.location} />
-                <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-[rgba(255,249,239,0.72)] p-5">
+                <div className="rounded-[20px] border border-[rgba(244,208,63,0.4)] bg-[rgba(255,249,239,0.72)] p-4 md:rounded-3xl md:p-5">
                   <p className="text-xs font-bold uppercase text-slate-500">Destination</p>
-                  <p className="mt-3 font-heading text-3xl leading-none text-[#111318]">{itinerary.location}</p>
+                  <p className="mt-3 font-heading text-2xl leading-none text-[#111318] md:text-3xl">{itinerary.location}</p>
                   <p className="mt-3 text-sm leading-7 text-slate-600">
                     Tuned around your selected mood, transport preferences, and travel distance.
                   </p>
@@ -213,14 +213,14 @@ export default function Results() {
             </div>
           </Card>
 
-          <Card className="overflow-hidden rounded-3xl border border-[rgba(244,208,63,0.45)] bg-white/88 p-4 shadow-[0_24px_60px_rgba(255,56,92,0.08)] md:p-6">
+          <Card className="overflow-hidden rounded-[22px] border border-[rgba(244,208,63,0.45)] bg-white/88 p-3 shadow-[0_24px_60px_rgba(255,56,92,0.08)] md:rounded-3xl md:p-6">
             <GoogleMap activities={itinerary.activities} location={itinerary.location} />
           </Card>
 
-          <Card className="rounded-3xl border border-[rgba(244,208,63,0.45)] bg-white/88 p-6 shadow-[0_24px_60px_rgba(255,56,92,0.08)] md:p-8">
-            <div className="mb-8">
+          <Card className="rounded-[22px] border border-[rgba(244,208,63,0.45)] bg-white/88 p-4 shadow-[0_24px_60px_rgba(255,56,92,0.08)] md:rounded-3xl md:p-8">
+            <div className="mb-6 md:mb-8">
               <p className="text-sm font-bold uppercase text-primary">Route Timeline</p>
-              <h2 className="mt-4 font-heading text-4xl leading-none text-[#111318] md:text-5xl">
+              <h2 className="mt-3 font-heading text-[2.15rem] font-extrabold leading-[0.95] text-[#111318] md:mt-4 md:text-5xl">
                 Your day, in order
               </h2>
             </div>
@@ -231,11 +231,11 @@ export default function Results() {
             <div>
               <div className="mb-6">
                 <p className="text-sm font-bold uppercase text-primary">Next Route Ideas</p>
-                <h2 className="mt-4 font-heading text-4xl leading-none text-[#111318] md:text-5xl">
+                <h2 className="mt-3 font-heading text-[2.15rem] font-extrabold leading-[0.95] text-[#111318] md:mt-4 md:text-5xl">
                   Keep the plan going
                 </h2>
               </div>
-              <div className="grid gap-6 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-3 md:gap-6">
                 {itinerary.recommendations.map((recommendation) => (
                   <RecommendationCard key={recommendation.id} recommendation={recommendation} />
                 ))}
@@ -245,7 +245,7 @@ export default function Results() {
 
           <div className="flex justify-center pt-2">
             <Button
-              className="h-14 rounded-full bg-primary px-10 text-lg font-bold text-white hover:bg-[#ff5977]"
+              className="h-14 w-full rounded-full bg-primary px-10 text-base font-bold text-white hover:bg-[#ff5977] sm:w-auto md:text-lg"
               onClick={() => {
                 sessionStorage.clear();
                 setLocation("/");

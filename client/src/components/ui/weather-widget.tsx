@@ -89,7 +89,7 @@ export function WeatherWidget({ location }: WeatherWidgetProps) {
 
   if (!weather) {
     return (
-      <div className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white/82 p-5">
+      <div className="rounded-[20px] border border-[rgba(244,208,63,0.4)] bg-white/82 p-4 md:rounded-3xl md:p-5">
         <p className="text-sm font-semibold text-slate-500">Weather unavailable for {location}</p>
         {error && (
           <p className="mt-2 text-xs text-slate-400">Live weather could not be refreshed.</p>
@@ -102,15 +102,15 @@ export function WeatherWidget({ location }: WeatherWidgetProps) {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-[rgba(244,208,63,0.4)] bg-white/82 p-5 shadow-[0_14px_32px_rgba(255,56,92,0.05)]"
+      className="rounded-[20px] border border-[rgba(244,208,63,0.4)] bg-white/82 p-4 shadow-[0_14px_32px_rgba(255,56,92,0.05)] md:rounded-3xl md:p-5"
     >
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3 md:gap-4">
         <div>
           <p className="text-xs font-bold uppercase text-slate-400">
             Weather in {weather.locationName || location}
           </p>
           <div className="mt-3 flex items-center gap-3">
-            {getWeatherIcon(weather.icon)}
+            <div className="shrink-0">{getWeatherIcon(weather.icon)}</div>
             <div>
               <p className="text-2xl font-extrabold text-[#111318]">{weather.temp}°C</p>
               <p className="text-sm text-slate-600">{weather.condition}</p>
@@ -118,7 +118,7 @@ export function WeatherWidget({ location }: WeatherWidgetProps) {
           </div>
         </div>
 
-        <div className="space-y-2 text-right text-sm text-slate-600">
+        <div className="shrink-0 space-y-2 text-right text-xs text-slate-600 sm:text-sm">
           <div>{weather.humidity}% humidity</div>
           <div className="flex items-center justify-end gap-1">
             <Wind className="h-4 w-4" />
