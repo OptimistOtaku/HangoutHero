@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { auth, googleAuthProvider, isMockMode } from "../lib/firebase";
 import { useToast } from "./use-toast";
 
@@ -10,6 +10,7 @@ export interface UserProfile {
   email?: string;
   displayName?: string;
   photoURL?: string;
+  isNew?: boolean;
 }
 
 interface AuthContextType {
@@ -17,6 +18,7 @@ interface AuthContextType {
   loading: boolean;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  updateUsername: (newUsername: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: userData.email || undefined,
         displayName: userData.displayName || undefined,
         photoURL: userData.photoURL || undefined,
+        isNew: dbUser.isNew,
       };
 
       setUser(fullProfile);
@@ -190,8 +193,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUsername = async (newUsername: string) => {
+    if (!user) return;
+    try {
+      const response = await fetch("/api/user/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          username: newUsername,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update profile name on server");
+      }
+
+      const updatedData = await response.json();
+      const updatedProfile = { ...user, username: updatedData.username, isNew: false };
+      setUser(updatedProfile);
+      sessionStorage.setItem("hangoutHeroUser", JSON.stringify(updatedProfile));
+      
+      toast({
+        title: "Profile Updated!",
+        description: `Your explorer handle has been successfully updated to ${updatedData.username}.`,
+      });
+    } catch (error) {
+      console.error("Profile update error:", error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to save your new explorer handle. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, loading, loginWithGoogle, logout, updateUsername }}>
       {children}
     </AuthContext.Provider>
   );

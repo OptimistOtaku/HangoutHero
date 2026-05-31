@@ -219,12 +219,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const lookupName = email || username || `user_${firebaseUid.slice(0, 5)}`;
       let user = await storage.getUserByUsername(lookupName);
+      let isNew = false;
 
       if (!user) {
         user = await storage.createUser({
           username: lookupName,
           password: firebaseUid,
         });
+        isNew = true;
         console.log("Created database user for Firebase session:", user.id);
       } else {
         if (user.password !== firebaseUid) {
@@ -232,6 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             username: `${lookupName}_${firebaseUid.slice(0, 4)}`,
             password: firebaseUid,
           });
+          isNew = true;
           console.log("Created user with distinct username suffix:", user.id);
         } else {
           console.log("Synced existing user for Firebase session:", user.id);
@@ -241,10 +244,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         id: user.id,
         username: user.username,
+        isNew,
       });
     } catch (error) {
       console.error("Auth sync error:", error);
       res.status(500).json({ message: "Failed to synchronize user session" });
+    }
+  });
+
+  app.post("/api/user/update", async (req: Request, res: Response) => {
+    try {
+      const { id, username } = req.body;
+
+      if (!id || !username) {
+        return res.status(400).json({ message: "User ID and new username are required" });
+      }
+
+      const updatedUser = await storage.updateUser(Number(id), String(username).trim());
+      console.log("Updated user profile in database:", updatedUser.id, "to:", updatedUser.username);
+
+      res.json({
+        id: updatedUser.id,
+        username: updatedUser.username,
+      });
+    } catch (error) {
+      console.error("User profile update error:", error);
+      res.status(500).json({ message: "Failed to update user profile" });
     }
   });
 

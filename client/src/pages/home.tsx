@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Camera, MapPinned, Sparkles, Stamp, TicketCheck } from "lucide-react";
+import { ArrowRight, Camera, MapPinned, Sparkles, Stamp, TicketCheck, Bookmark } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Carousel,
   CarouselContent,
@@ -41,6 +42,7 @@ const heroNotes = [
 ];
 
 export default function Home() {
+  const { user } = useAuth();
   const [currentPlaceIndex, setCurrentPlaceIndex] = useState(0);
   const heroRef = useRef<HTMLElement | null>(null);
 
@@ -141,9 +143,15 @@ export default function Home() {
             <span className="block text-primary">Keep the story.</span>
           </h1>
 
-          <p className="gsap-reveal mt-5 max-w-2xl text-base leading-7 text-slate-600 md:mt-6 md:text-xl md:leading-8">
-            HangoutHero turns a mood, a city, and a few practical choices into a real-world hangout route with mapped stops, live weather, and scrapbook-style place cards.
-          </p>
+          {user ? (
+            <p className="gsap-reveal mt-5 max-w-2xl text-base leading-7 text-slate-600 md:mt-6 md:text-xl md:leading-8">
+              Welcome back, <span className="font-bold text-primary font-heading">@{user.username}</span>! Your customized traveler passport is active. Build a new hangout route or view your past scrapbook pages.
+            </p>
+          ) : (
+            <p className="gsap-reveal mt-5 max-w-2xl text-base leading-7 text-slate-600 md:mt-6 md:text-xl md:leading-8">
+              HangoutHero turns a mood, a city, and a few practical choices into a real-world hangout route with mapped stops, live weather, and scrapbook-style place cards.
+            </p>
+          )}
 
           <div className="gsap-reveal mt-6 flex flex-wrap gap-2 md:mt-7">
             {heroNotes.map((note) => (
@@ -163,14 +171,25 @@ export default function Home() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <a href="#journey-styles">
+            {user ? (
               <Button
+                onClick={() => window.dispatchEvent(new Event("open-traveler-profile"))}
                 variant="outline"
-                className="h-14 w-full rounded-[12px] border-[1.5px] border-slate-300 bg-white/76 px-8 text-base font-bold text-slate-700 hover:border-primary hover:bg-white sm:w-auto"
+                className="h-14 w-full rounded-[12px] border-[1.5px] border-slate-300 bg-white/76 px-8 text-base font-bold text-slate-700 hover:border-primary hover:bg-white sm:w-auto flex items-center justify-center gap-2 cursor-pointer transition-all"
               >
-                See Sample Routes
+                <Bookmark className="h-4 w-4 text-primary" />
+                View Saved Scrapbooks
               </Button>
-            </a>
+            ) : (
+              <a href="#journey-styles">
+                <Button
+                  variant="outline"
+                  className="h-14 w-full rounded-[12px] border-[1.5px] border-slate-300 bg-white/76 px-8 text-base font-bold text-slate-700 hover:border-primary hover:bg-white sm:w-auto"
+                >
+                  See Sample Routes
+                </Button>
+              </a>
+            )}
           </div>
         </div>
 

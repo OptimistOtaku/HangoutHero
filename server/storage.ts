@@ -3,13 +3,11 @@ import type { ItineraryResponse } from "../client/src/lib/openai";
 import { db } from "./db.js";
 import { eq } from "drizzle-orm";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, username: string): Promise<User>;
   saveItinerary(itinerary: ItineraryResponse, userId?: number): Promise<{ id: number; itinerary: ItineraryResponse }>;
   getItinerary(id: number): Promise<Itinerary | undefined>;
   getAllItineraries(userId?: number): Promise<Itinerary[]>;
@@ -17,7 +15,7 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
-  private itineraries: Map<number, ItineraryResponse>;
+  private itineraries: Map<number, { itinerary: ItineraryResponse; userId?: number }>;
   currentId: number;
   currentItineraryId: number;
 
@@ -44,10 +42,18 @@ export class MemStorage implements IStorage {
     this.users.set(id, user);
     return user;
   }
+
+  async updateUser(id: number, username: string): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) throw new Error("User not found");
+    const updated = { ...user, username };
+    this.users.set(id, updated);
+    return updated;
+  }
   
   async saveItinerary(itinerary: ItineraryResponse, userId?: number): Promise<{ id: number; itinerary: ItineraryResponse }> {
     const id = this.currentItineraryId++;
-    this.itineraries.set(id, itinerary);
+    this.itineraries.set(id, { itinerary, userId });
     return { id, itinerary };
   }
 
@@ -58,25 +64,25 @@ export class MemStorage implements IStorage {
     // Convert to Itinerary format
     return {
       id,
-      userId: null,
-      title: saved.title,
-      description: saved.description,
-      location: saved.location,
-      activities: saved.activities as any,
-      recommendations: saved.recommendations as any,
+      userId: saved.userId || null,
+      title: saved.itinerary.title,
+      description: saved.itinerary.description,
+      location: saved.itinerary.location,
+      activities: saved.itinerary.activities as any,
+      recommendations: saved.itinerary.recommendations as any,
       createdAt: new Date(),
     };
   }
 
   async getAllItineraries(userId?: number): Promise<Itinerary[]> {
-    const all = Array.from(this.itineraries.entries()).map(([id, itinerary]) => ({
+    const all = Array.from(this.itineraries.entries()).map(([id, item]) => ({
       id,
-      userId: userId || null,
-      title: itinerary.title,
-      description: itinerary.description,
-      location: itinerary.location,
-      activities: itinerary.activities as any,
-      recommendations: itinerary.recommendations as any,
+      userId: item.userId || null,
+      title: item.itinerary.title,
+      description: item.itinerary.description,
+      location: item.itinerary.location,
+      activities: item.itinerary.activities as any,
+      recommendations: item.itinerary.recommendations as any,
       createdAt: new Date(),
     }));
     
@@ -100,6 +106,12 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     if (!db) throw new Error("Database not configured");
     const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async updateUser(id: number, username: string): Promise<User> {
+    if (!db) throw new Error("Database not configured");
+    const result = await db.update(users).set({ username }).where(eq(users.id, id)).returning();
     return result[0];
   }
 
