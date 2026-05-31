@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, username: string): Promise<User>;
   saveItinerary(itinerary: ItineraryResponse, userId?: number): Promise<{ id: number; itinerary: ItineraryResponse }>;
@@ -33,6 +34,12 @@ export class MemStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
       (user) => user.username === username,
+    );
+  }
+
+  async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.password === firebaseUid,
     );
   }
 
@@ -100,6 +107,12 @@ export class DatabaseStorage implements IStorage {
   async getUserByUsername(username: string): Promise<User | undefined> {
     if (!db) throw new Error("Database not configured");
     const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
+  }
+
+  async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {
+    if (!db) throw new Error("Database not configured");
+    const result = await db.select().from(users).where(eq(users.password, firebaseUid)).limit(1);
     return result[0];
   }
 

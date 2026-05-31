@@ -217,28 +217,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Firebase UID is required" });
       }
 
-      const lookupName = email || username || `user_${firebaseUid.slice(0, 5)}`;
-      let user = await storage.getUserByUsername(lookupName);
+      // 1. Look up by firebaseUid (stored in password field) first
+      let user = await storage.getUserByFirebaseUid(firebaseUid);
       let isNew = false;
 
       if (!user) {
+        // 2. If no user has this Firebase UID, check if their default username (email) is already taken
+        const lookupName = email || username || `user_${firebaseUid.slice(0, 5)}`;
+        const existingUserWithUsername = await storage.getUserByUsername(lookupName);
+        
+        // If the username is already taken by someone else, append a random suffix to make it unique
+        const finalUsername = existingUserWithUsername 
+          ? `${lookupName.split('@')[0]}_${Math.floor(1000 + Math.random() * 9000)}`
+          : lookupName;
+
         user = await storage.createUser({
-          username: lookupName,
+          username: finalUsername,
           password: firebaseUid,
         });
         isNew = true;
         console.log("Created database user for Firebase session:", user.id);
       } else {
-        if (user.password !== firebaseUid) {
-          user = await storage.createUser({
-            username: `${lookupName}_${firebaseUid.slice(0, 4)}`,
-            password: firebaseUid,
-          });
-          isNew = true;
-          console.log("Created user with distinct username suffix:", user.id);
-        } else {
-          console.log("Synced existing user for Firebase session:", user.id);
-        }
+        console.log("Synced existing user for Firebase session:", user.id);
       }
 
       res.json({
