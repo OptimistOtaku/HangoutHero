@@ -1249,12 +1249,44 @@ async function fetchGooglePlacePhoto(query: string): Promise<{ body: Buffer; con
 }
 
 function buildPlacePhotoQueries(query: string): string[] {
-  const cleaned = query
-    .replace(/\b(visit|morning|evening|afternoon|breakfast|lunch|dinner|at|the)\b/gi, " ")
+  const candidates: string[] = [];
+  
+  const cleanPunctuation = (str: string) => str.replace(/^[^a-zA-Z0-9\u00C0-\u017F]+|[^a-zA-Z0-9\u00C0-\u017F]+$/g, "").trim();
+
+  // 1. Original query cleaned of extreme punctuation
+  candidates.push(cleanPunctuation(query));
+
+  // 2. Clean common prefix phrases and words
+  let cleaned = query.replace(/^\b(explore|visit|trek to|walk on|stroll along|sunset at|sunrise at|shopping at|dinner at|lunch at|breakfast at|morning walk in|day trip to|tour of|ride at|safari at|workshop at|experience at|savor at|enjoy at|view at|go to|take a|have a)\b/gi, "");
+  
+  cleaned = cleaned
+    .replace(/\b(visit|morning|evening|afternoon|breakfast|lunch|dinner|at|the|a|an|in|to|on|of|with|for)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
+    
+  candidates.push(cleanPunctuation(cleaned));
 
-  return Array.from(new Set([query, cleaned].filter(Boolean)));
+  // 3. Deduplicate overlapping words
+  const words = cleaned.split(/\s+/);
+  const uniqueWords: string[] = [];
+  const wordSet = new Set<string>();
+  for (const word of words) {
+    const cleanWord = word.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!cleanWord) continue;
+    if (!wordSet.has(cleanWord)) {
+      wordSet.add(cleanWord);
+      uniqueWords.push(word);
+    }
+  }
+  const deduplicated = uniqueWords.join(" ");
+  candidates.push(cleanPunctuation(deduplicated));
+
+  // 4. Try just the first 4 words if the deduplicated query is still long
+  if (uniqueWords.length > 4) {
+    candidates.push(cleanPunctuation(uniqueWords.slice(0, 4).join(" ")));
+  }
+
+  return Array.from(new Set(candidates.filter(Boolean)));
 }
 
 async function fetchGooglePlacePhotoNew(
@@ -1266,7 +1298,7 @@ async function fetchGooglePlacePhotoNew(
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": "places.displayName,places.photos.name",
+      "X-Goog-FieldMask": "places.id,places.displayName,places.photos",
     },
     body: JSON.stringify({
       textQuery: query,
