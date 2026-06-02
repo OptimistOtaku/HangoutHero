@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, jsonb, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -28,7 +28,9 @@ export const itineraries = pgTable("itineraries", {
   recommendations: jsonb("recommendations").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   notes: text("notes"),
-});
+}, (table) => ({
+  userIdIdx: index("itineraries_user_id_idx").on(table.userId),
+}));
 
 // Defining the shape of the activities and recommendations in the itinerary
 export const activitySchema = z.object({
