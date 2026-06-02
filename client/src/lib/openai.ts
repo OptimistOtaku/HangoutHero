@@ -43,11 +43,13 @@ export interface Recommendation {
 
 export interface ItineraryResponse {
   id?: number;
+  userId?: number;
   title: string;
   description: string;
   location: string;
   activities: ItineraryActivity[];
   recommendations: Recommendation[];
+  notes?: string;
 }
 
 export async function generateItinerary(

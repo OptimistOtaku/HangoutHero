@@ -78,6 +78,50 @@ export default function Results() {
   const { user, loginWithGoogle } = useAuth();
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
+  const [journalNotes, setJournalNotes] = useState("");
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+
+  // Sync journal notes when itinerary changes
+  useEffect(() => {
+    if (itinerary) {
+      setJournalNotes(itinerary.notes || "");
+    }
+  }, [itinerary]);
+
+  const handleSaveNotes = async () => {
+    if (!itinerary || !itinerary.id) return;
+    
+    setIsSavingNotes(true);
+    try {
+      const response = await fetch(`/api/itinerary/${itinerary.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: journalNotes }),
+      });
+      
+      if (!response.ok) throw new Error("Failed to save journal notes");
+      
+      const data = await response.json();
+      
+      const updatedItinerary = { ...itinerary, notes: data.notes };
+      setItinerary(updatedItinerary);
+      sessionStorage.setItem("itineraryData", JSON.stringify(updatedItinerary));
+      
+      toast({
+        title: "Journal Stamped! ✍️",
+        description: "Your travel notes have been securely saved to this scrapbook page.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to save journal",
+        description: "Could not save your notes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
   const persistItinerary = async () => {
     if (!itinerary) return null;
     if (itinerary.id) return itinerary.id;
@@ -85,7 +129,7 @@ export default function Results() {
     setIsSaving(true);
     try {
       const result = await saveItinerary(itinerary, user?.id);
-      const updatedItinerary = { ...itinerary, id: result.id };
+      const updatedItinerary = { ...itinerary, id: result.id, userId: user?.id };
       setItinerary(updatedItinerary);
       setIsSaved(true);
       sessionStorage.setItem("itineraryData", JSON.stringify(updatedItinerary));
@@ -258,6 +302,67 @@ export default function Results() {
             </div>
             <ItineraryTimeline activities={itinerary.activities} />
           </Card>
+
+          {/* Traveler's Scrapbook Journal Lined Card */}
+          {user && itinerary.id && itinerary.userId === user.id && (
+            <Card className="overflow-hidden rounded-[22px] border border-[rgba(244,208,63,0.45)] bg-[#fffdf6] p-5 shadow-[0_24px_60px_rgba(255,56,92,0.07)] md:rounded-3xl md:p-8 relative">
+              {/* Visual Stamp Ribbon */}
+              <div className="absolute -right-3 -top-2 select-none opacity-40 pointer-events-none transform rotate-[14deg] font-scrap text-3xl font-black text-primary border-2 border-primary rounded-xl px-3 py-0.5">
+                JOURNAL PAGE
+              </div>
+
+              <div className="mb-6">
+                <p className="text-sm font-bold uppercase text-primary">Traveler's Scrapbook Journal</p>
+                <h2 className="mt-3 font-heading text-[2.15rem] font-extrabold leading-[0.95] text-[#111318] md:mt-4 md:text-5xl">
+                  Capture your memories
+                </h2>
+                <p className="mt-3 text-slate-500 text-sm leading-relaxed max-w-xl">
+                  This scrapbook page is active in your passport! Jot down details, memories, cafe recommendations, or travel notes below.
+                </p>
+              </div>
+
+              {/* Lined Notebook Paper Card */}
+              <div className="relative mt-5 rounded-2xl border border-[rgba(244,208,63,0.35)] bg-[#faf8f0] p-5 md:p-6 shadow-inner">
+                {/* Visual red margin line */}
+                <div className="absolute left-8 top-0 bottom-0 w-0.5 border-r border-dashed border-red-300" />
+                
+                <textarea
+                  value={journalNotes}
+                  onChange={(e) => setJournalNotes(e.target.value)}
+                  placeholder="Today we planned to go to Connaught Place. Must order the special cold brew at Blue Tokai!..."
+                  rows={6}
+                  className="w-full bg-transparent pl-8 border-none text-slate-700 font-scrap text-[1.45rem] leading-[2.15rem] focus:outline-none focus:ring-0 resize-y relative z-10"
+                  style={{
+                    backgroundImage: "linear-gradient(rgba(0,0,0,0) 0%, rgba(0,0,0,0) 95%, rgba(0,0,0,0.06) 95%, rgba(0,0,0,0.06) 100%)",
+                    backgroundSize: "100% 2.15rem",
+                    lineHeight: "2.15rem"
+                  }}
+                />
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <Button
+                  onClick={handleSaveNotes}
+                  disabled={isSavingNotes}
+                  className="rounded-full bg-primary px-8 py-5 text-sm font-bold text-white hover:bg-[#ff5977] shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  {isSavingNotes ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Stamping Journal...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z" />
+                      </svg>
+                      Stamp Journal (Save Notes)
+                    </>
+                  )}
+                </Button>
+              </div>
+            </Card>
+          )}
 
           {itinerary.recommendations?.length > 0 && (
             <div>

@@ -1049,16 +1049,75 @@ Return only valid JSON without any markdown formatting or code blocks.`;
       // Convert to ItineraryResponse format
       res.json({
         id: itinerary.id,
+        userId: itinerary.userId,
         title: itinerary.title,
         description: itinerary.description,
         location: itinerary.location,
         activities: itinerary.activities as any,
         recommendations: itinerary.recommendations as any,
         createdAt: itinerary.createdAt,
+        notes: itinerary.notes,
       });
     } catch (error) {
       console.error("Error retrieving itinerary:", error);
       res.status(500).json({ message: "Failed to retrieve itinerary. Please try again." });
+    }
+  });
+
+  // API endpoint to update itinerary notes (journal entries)
+  app.post("/api/itinerary/:id/notes", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { notes } = req.body;
+
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid itinerary ID" });
+      }
+
+      const itinerary = await storage.getItinerary(id);
+      if (!itinerary) {
+        return res.status(404).json({ message: "Itinerary not found" });
+      }
+
+      // Sync updated notes
+      const updated = await storage.updateItineraryNotes(id, notes || "");
+      console.log(`Updated notes for itinerary ID: ${id}`);
+      
+      res.json({
+        id: updated.id,
+        message: "Journal notes saved successfully",
+        notes: updated.notes
+      });
+    } catch (error) {
+      console.error("Error updating itinerary notes:", error);
+      res.status(500).json({ message: "Failed to save journal notes. Please try again." });
+    }
+  });
+
+  // API endpoint to delete a saved itinerary
+  app.delete("/api/itinerary/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid itinerary ID" });
+      }
+
+      const itinerary = await storage.getItinerary(id);
+      if (!itinerary) {
+        return res.status(404).json({ message: "Itinerary not found" });
+      }
+
+      await storage.deleteItinerary(id);
+      console.log(`Deleted itinerary ID: ${id}`);
+
+      res.json({
+        id,
+        message: "Itinerary deleted successfully"
+      });
+    } catch (error) {
+      console.error("Error deleting itinerary:", error);
+      res.status(500).json({ message: "Failed to delete itinerary. Please try again." });
     }
   });
 

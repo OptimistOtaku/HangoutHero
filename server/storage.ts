@@ -12,6 +12,8 @@ export interface IStorage {
   saveItinerary(itinerary: ItineraryResponse, userId?: number): Promise<{ id: number; itinerary: ItineraryResponse }>;
   getItinerary(id: number): Promise<Itinerary | undefined>;
   getAllItineraries(userId?: number): Promise<Itinerary[]>;
+  deleteItinerary(id: number): Promise<void>;
+  updateItineraryNotes(id: number, notes: string): Promise<Itinerary>;
 }
 
 export class MemStorage implements IStorage {
@@ -78,6 +80,7 @@ export class MemStorage implements IStorage {
       activities: saved.itinerary.activities as any,
       recommendations: saved.itinerary.recommendations as any,
       createdAt: new Date(),
+      notes: saved.itinerary.notes || null,
     };
   }
 
@@ -91,9 +94,32 @@ export class MemStorage implements IStorage {
       activities: item.itinerary.activities as any,
       recommendations: item.itinerary.recommendations as any,
       createdAt: new Date(),
+      notes: item.itinerary.notes || null,
     }));
     
     return userId ? all.filter(i => i.userId === userId) : all;
+  }
+
+  async deleteItinerary(id: number): Promise<void> {
+    this.itineraries.delete(id);
+  }
+
+  async updateItineraryNotes(id: number, notes: string): Promise<Itinerary> {
+    const saved = this.itineraries.get(id);
+    if (!saved) throw new Error("Itinerary not found");
+    const updatedItinerary = { ...saved.itinerary, notes };
+    this.itineraries.set(id, { itinerary: updatedItinerary, userId: saved.userId });
+    return {
+      id,
+      userId: saved.userId || null,
+      title: updatedItinerary.title,
+      description: updatedItinerary.description,
+      location: updatedItinerary.location,
+      activities: updatedItinerary.activities as any,
+      recommendations: updatedItinerary.recommendations as any,
+      createdAt: new Date(),
+      notes: updatedItinerary.notes || null,
+    };
   }
 }
 
@@ -137,6 +163,7 @@ export class DatabaseStorage implements IStorage {
       location: itinerary.location,
       activities: itinerary.activities as any,
       recommendations: itinerary.recommendations as any,
+      notes: itinerary.notes || null,
     };
 
     const result = await db.insert(itineraries).values(insertData).returning();
@@ -150,6 +177,7 @@ export class DatabaseStorage implements IStorage {
         location: saved.location,
         activities: saved.activities as any,
         recommendations: saved.recommendations as any,
+        notes: saved.notes || undefined,
       },
     };
   }
@@ -166,6 +194,18 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(itineraries).where(eq(itineraries.userId, userId));
     }
     return await db.select().from(itineraries);
+  }
+
+  async deleteItinerary(id: number): Promise<void> {
+    if (!db) throw new Error("Database not configured");
+    await db.delete(itineraries).where(eq(itineraries.id, id));
+  }
+
+  async updateItineraryNotes(id: number, notes: string): Promise<Itinerary> {
+    if (!db) throw new Error("Database not configured");
+    const result = await db.update(itineraries).set({ notes }).where(eq(itineraries.id, id)).returning();
+    if (result.length === 0) throw new Error("Itinerary not found");
+    return result[0];
   }
 }
 

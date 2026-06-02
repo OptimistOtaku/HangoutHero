@@ -1,8 +1,9 @@
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
-import { MapPin, Menu, Sparkles, X, LogOut, Bookmark, Calendar, Globe } from "lucide-react";
+import { MapPin, Menu, Sparkles, X, LogOut, Bookmark, Calendar, Globe, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const navItems = [
   { label: "How it works", href: "/#how-it-works" },
@@ -40,6 +51,7 @@ const navItems = [
 export default function Header() {
   const [location, setLocation] = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { toast } = useToast();
   
   // Auth state & profile sheet state
   const { user, loginWithGoogle, logout, updateUsername } = useAuth();
@@ -47,9 +59,55 @@ export default function Header() {
   const [savedTrips, setSavedTrips] = useState<any[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(false);
 
+  // Trip deletion state
+  const [tripToDelete, setTripToDelete] = useState<any | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Profile editing state
   const [isEditingHandle, setIsEditingHandle] = useState(false);
   const [newHandle, setNewHandle] = useState("");
+
+  const handleDeleteClick = (e: React.MouseEvent, trip: any) => {
+    e.stopPropagation();
+    setTripToDelete(trip);
+  };
+
+  const confirmDeleteTrip = async () => {
+    if (!tripToDelete) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/itinerary/${tripToDelete.id}`, {
+        method: "DELETE",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to delete itinerary");
+      }
+
+      setSavedTrips((prev) => prev.filter((t) => t.id !== tripToDelete.id));
+      
+      const params = new URLSearchParams(window.location.search);
+      const currentId = params.get("id");
+      if (currentId && parseInt(currentId) === tripToDelete.id) {
+        sessionStorage.removeItem("itineraryData");
+        setLocation("/");
+      }
+
+      toast({
+        title: "Scrapbook Page Ripped Out 🗑️",
+        description: `"${tripToDelete.title}" has been permanently deleted from your passport.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Could not delete trip",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setTripToDelete(null);
+    }
+  };
 
   // External profile drawer trigger
   useEffect(() => {
@@ -533,12 +591,21 @@ export default function Header() {
                     key={trip.id}
                     className="relative group overflow-hidden rounded-3xl border border-[rgba(240,215,154,0.78)] bg-white p-4 shadow-[0_12px_24px_rgba(94,71,45,0.04)] hover:shadow-[0_18px_38px_rgba(255,56,92,0.07)] transition-all duration-300"
                   >
+                    {/* Delete Scrapbook Button */}
+                    <button
+                      onClick={(e) => handleDeleteClick(e, trip)}
+                      className="absolute top-4 right-4 p-2 rounded-full border border-dashed border-red-200 bg-[#fffcfb] text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:border-red-400 transition-all duration-200 focus:opacity-100 shadow-sm z-20 cursor-pointer"
+                      title="Rip page out (Delete)"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+
                     <div>
                       <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[10px] font-bold text-primary">
                         <MapPin className="h-2.5 w-2.5 fill-primary" />
                         {trip.location}
                       </span>
-                      <h4 className="mt-2 font-heading text-[1.2rem] font-bold text-slate-800 leading-tight group-hover:text-primary transition-colors">
+                      <h4 className="mt-2 font-heading text-[1.2rem] font-bold text-slate-800 leading-tight group-hover:text-primary transition-colors pr-6">
                         {trip.title}
                       </h4>
                       <p className="mt-2 text-xs leading-relaxed text-slate-500 line-clamp-2">
@@ -633,6 +700,48 @@ export default function Header() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Rip Out (Delete) Confirmation Dialog */}
+      <AlertDialog open={!!tripToDelete} onOpenChange={(open) => !open && setTripToDelete(null)}>
+        <AlertDialogContent className="rounded-3xl border border-[rgba(244,208,63,0.45)] bg-[rgba(255,250,242,0.98)] p-6 shadow-2xl backdrop-blur-md max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-heading text-3xl font-extrabold text-[#111318] text-center flex flex-col items-center gap-3">
+              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-500 border border-dashed border-red-300 shadow-md">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              Rip out page?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-slate-600 text-sm leading-relaxed mt-4">
+              Are you sure you want to rip this page out of your travel scrapbook? This will permanently delete the itinerary <strong className="text-slate-800">"{tripToDelete?.title}"</strong> and all saved journal notes. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="mt-6 flex flex-col gap-3">
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDeleteTrip();
+              }}
+              disabled={isDeleting}
+              className="h-12 rounded-full bg-red-500 font-bold text-white hover:bg-red-600 text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Ripping Page...
+                </>
+              ) : (
+                "Yes, Rip Page Out"
+              )}
+            </AlertDialogAction>
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="h-11 rounded-full border border-slate-300 bg-white font-semibold text-slate-700 hover:border-primary text-xs cursor-pointer"
+            >
+              Keep Page
+            </AlertDialogCancel>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

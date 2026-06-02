@@ -27,6 +27,7 @@ export const itineraries = pgTable("itineraries", {
   activities: jsonb("activities").notNull(),
   recommendations: jsonb("recommendations").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  notes: text("notes"),
 });
 
 // Defining the shape of the activities and recommendations in the itinerary
@@ -68,7 +69,8 @@ export const insertItinerarySchema = createInsertSchema(itineraries).pick({
   description: true,
   location: true,
   activities: true,
-  recommendations: true
+  recommendations: true,
+  notes: true
 });
 
 export type InsertItinerary = z.infer<typeof insertItinerarySchema>;
