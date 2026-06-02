@@ -27,6 +27,9 @@ export default function Results() {
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { user, loginWithGoogle } = useAuth();
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   useEffect(() => {
     const loadItinerary = async () => {
       try {
@@ -37,7 +40,6 @@ export default function Results() {
         if (itineraryData) {
           const parsed = JSON.parse(itineraryData);
           setItinerary(parsed);
-          setIsSaved(Boolean(parsed.id));
           return;
         }
 
@@ -49,7 +51,6 @@ export default function Results() {
 
           const savedItinerary = await response.json();
           setItinerary(savedItinerary);
-          setIsSaved(true);
           sessionStorage.setItem("itineraryData", JSON.stringify(savedItinerary));
           return;
         }
@@ -75,8 +76,15 @@ export default function Results() {
     loadItinerary();
   }, [setLocation, toast]);
 
-  const { user, loginWithGoogle } = useAuth();
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  // Sync isSaved state based on itinerary ownership
+  useEffect(() => {
+    if (itinerary) {
+      // It is only considered saved if it has a database ID AND belongs to the logged-in user
+      setIsSaved(Boolean(itinerary.id && itinerary.userId && user && itinerary.userId === user.id));
+    } else {
+      setIsSaved(false);
+    }
+  }, [itinerary, user]);
 
   const [journalNotes, setJournalNotes] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -124,7 +132,10 @@ export default function Results() {
 
   const persistItinerary = async () => {
     if (!itinerary) return null;
-    if (itinerary.id) return itinerary.id;
+    // Only return the existing ID if it is already owned by this user
+    if (itinerary.id && itinerary.userId && user && itinerary.userId === user.id) {
+      return itinerary.id;
+    }
 
     setIsSaving(true);
     try {

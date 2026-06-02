@@ -37,6 +37,7 @@ export default function Location() {
   const [suggestions, setSuggestions] = useState<Array<{ text: string; placeId: string }>>([]);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     const savedPrefs = sessionStorage.getItem("preferenceData");
@@ -74,7 +75,10 @@ export default function Location() {
         if (response.ok) {
           const data = await response.json();
           setSuggestions(data);
-          setSuggestionsOpen(data.length > 0);
+          // Only pop open suggestions if the user is currently focusing/clicking the search bar
+          if (isFocused && data.length > 0) {
+            setSuggestionsOpen(true);
+          }
         }
       } catch (error) {
         console.error("Suggestions fetch error:", error);
@@ -84,7 +88,7 @@ export default function Location() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [locationData.location]);
+  }, [locationData.location, isFocused]);
 
   const handleSelectSuggestion = (cityName: string) => {
     // Standardize to the primary city name for cleaner AI queries
@@ -138,9 +142,11 @@ export default function Location() {
                   value={locationData.location}
                   onChange={(e) => setLocationData((prev) => ({ ...prev, location: e.target.value }))}
                   onFocus={() => {
+                    setIsFocused(true);
                     if (suggestions.length > 0) setSuggestionsOpen(true);
                   }}
                   onBlur={() => {
+                    setIsFocused(false);
                     setTimeout(() => setSuggestionsOpen(false), 200);
                   }}
                 />
