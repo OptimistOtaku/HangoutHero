@@ -1,17 +1,37 @@
-node_modules
-dist
-.env
-.env.local
-.DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
-.vercel
+# Dependencies and builds
+node_modules/
+dist/
+server/public/
+*.tsbuildinfo
 
-# Log files
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Deployment and archives
+.vercel/
+*.tar.gz
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 dev-server.out.log
 dev-server.err.log
+
+# OS and editor files
+.DS_Store
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+
+# Local backup files
+vite.config.ts.*
 
 # Agent tools & skills
 .agents/
