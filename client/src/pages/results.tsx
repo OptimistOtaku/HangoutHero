@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -86,25 +86,136 @@ export default function Results() {
     }
   }, [itinerary, user]);
 
+  interface Sticker {
+    id: string;
+    type: string;
+    x: number;
+    y: number;
+    rotate: number;
+  }
+
+  const AVAILABLE_STICKERS = [
+    { type: "coffee", emoji: "☕", label: "Coffee", color: "bg-[#fcedda] border-[#e6ccb2]" },
+    { type: "camera", emoji: "📷", label: "Snap", color: "bg-[#e8f1f5] border-[#b0cddb]" },
+    { type: "ticket", emoji: "🎫", label: "Admit One", color: "bg-[#f5e6eb] border-[#dbb2be]" },
+    { type: "heart", emoji: "💖", label: "Love It", color: "bg-[#ffe6e6] border-[#ffa3a3]" },
+    { type: "star", emoji: "⭐", label: "Must Visit", color: "bg-[#fff9db] border-[#ffe066]" },
+    { type: "suitcase", emoji: "🧳", label: "Adventure", color: "bg-[#e2f0d9] border-[#a9d18e]" },
+    { type: "flight", emoji: "✈️", label: "Explore", color: "bg-[#e6f2ff] border-[#99ccff]" },
+  ];
+
+  const parseJournalData = (rawNotes: string | undefined): { text: string; stickers: Sticker[] } => {
+    if (!rawNotes) return { text: "", stickers: [] };
+    try {
+      const parsed = JSON.parse(rawNotes);
+      if (parsed && typeof parsed === "object" && "text" in parsed) {
+        return {
+          text: parsed.text || "",
+          stickers: Array.isArray(parsed.stickers) ? parsed.stickers : []
+        };
+      }
+    } catch (e) {
+      // Return raw notes directly if not a valid JSON structure
+    }
+    return { text: rawNotes, stickers: [] };
+  };
+
   const [journalNotes, setJournalNotes] = useState("");
+  const [stickers, setStickers] = useState<Sticker[]>([]);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
 
-  // Sync journal notes when itinerary changes
+  // Drag and drop states
+  const [dragStickerId, setDragStickerId] = useState<string | null>(null);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const [dragStartStickerCoords, setDragStartStickerCoords] = useState({ x: 0, y: 0 });
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync journal notes and stickers when itinerary changes
   useEffect(() => {
     if (itinerary) {
-      setJournalNotes(itinerary.notes || "");
+      const { text, stickers: parsedStickers } = parseJournalData(itinerary.notes);
+      setJournalNotes(text);
+      setStickers(parsedStickers);
     }
   }, [itinerary]);
+
+  const handleStickerDragStart = (e: React.MouseEvent | React.TouchEvent, id: string, x: number, y: number) => {
+    e.preventDefault();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    setDragStickerId(id);
+    setDragStartPos({ x: clientX, y: clientY });
+    setDragStartStickerCoords({ x, y });
+  };
+
+  useEffect(() => {
+    const handleDragMove = (e: MouseEvent | TouchEvent) => {
+      if (!dragStickerId || !containerRef.current) return;
+      
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const deltaX = clientX - dragStartPos.x;
+      const deltaY = clientY - dragStartPos.y;
+      
+      const percentDeltaX = (deltaX / containerRect.width) * 100;
+      const percentDeltaY = (deltaY / containerRect.height) * 100;
+      
+      let newX = Math.max(5, Math.min(95, dragStartStickerCoords.x + percentDeltaX));
+      let newY = Math.max(5, Math.min(95, dragStartStickerCoords.y + percentDeltaY));
+      
+      setStickers((prev) => 
+        prev.map((s) => s.id === dragStickerId ? { ...s, x: newX, y: newY } : s)
+      );
+    };
+    
+    const handleDragEnd = () => {
+      setDragStickerId(null);
+    };
+    
+    if (dragStickerId) {
+      window.addEventListener("mousemove", handleDragMove);
+      window.addEventListener("mouseup", handleDragEnd);
+      window.addEventListener("touchmove", handleDragMove);
+      window.addEventListener("touchend", handleDragEnd);
+    }
+    
+    return () => {
+      window.removeEventListener("mousemove", handleDragMove);
+      window.removeEventListener("mouseup", handleDragEnd);
+      window.removeEventListener("touchmove", handleDragMove);
+      window.removeEventListener("touchend", handleDragEnd);
+    };
+  }, [dragStickerId, dragStartPos, dragStartStickerCoords]);
+
+  const handleAddSticker = (type: string) => {
+    const newSticker: Sticker = {
+      id: Math.random().toString(36).slice(2, 9),
+      type,
+      x: 30 + Math.random() * 40,
+      y: 35 + Math.random() * 30,
+      rotate: Math.floor(Math.random() * 40) - 20,
+    };
+    setStickers((prev) => [...prev, newSticker]);
+  };
 
   const handleSaveNotes = async () => {
     if (!itinerary || !itinerary.id) return;
     
     setIsSavingNotes(true);
     try {
+      const serializedData = JSON.stringify({
+        text: journalNotes,
+        stickers: stickers
+      });
+
       const response = await fetch(`/api/itinerary/${itinerary.id}/notes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes: journalNotes }),
+        body: JSON.stringify({ notes: serializedData }),
       });
       
       if (!response.ok) throw new Error("Failed to save journal notes");
@@ -117,7 +228,7 @@ export default function Results() {
       
       toast({
         title: "Journal Stamped! ✍️",
-        description: "Your travel notes have been securely saved to this scrapbook page.",
+        description: "Your travel notes and sticker designs have been securely saved to this scrapbook page.",
       });
     } catch (error) {
       toast({
@@ -332,17 +443,70 @@ export default function Results() {
                 </p>
               </div>
 
+              {/* Sticker Selection Tray */}
+              <div className="mt-5">
+                <p className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Decorate your page with travel stamps:</p>
+                <div className="flex flex-wrap gap-2.5">
+                  {AVAILABLE_STICKERS.map((st) => (
+                    <button
+                      key={st.type}
+                      onClick={() => handleAddSticker(st.type)}
+                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-dashed text-xs font-bold text-slate-700 transition-all hover:scale-105 hover:-rotate-2 cursor-pointer shadow-sm ${st.color}`}
+                    >
+                      <span className="text-sm">{st.emoji}</span>
+                      <span>{st.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Lined Notebook Paper Card */}
-              <div className="relative mt-5 rounded-2xl border border-[rgba(244,208,63,0.35)] bg-[#faf8f0] p-5 md:p-6 shadow-inner">
+              <div 
+                ref={containerRef}
+                className="relative mt-5 rounded-2xl border border-[rgba(244,208,63,0.35)] bg-[#faf8f0] p-5 md:p-6 shadow-inner min-h-[300px] overflow-hidden"
+              >
                 {/* Visual red margin line */}
-                <div className="absolute left-8 top-0 bottom-0 w-0.5 border-r border-dashed border-red-300" />
+                <div className="absolute left-8 top-0 bottom-0 w-0.5 border-r border-dashed border-red-300 pointer-events-none" />
                 
+                {/* Render placed stickers */}
+                {stickers.map((st) => {
+                  const stickerDef = AVAILABLE_STICKERS.find(s => s.type === st.type);
+                  return (
+                    <div
+                      key={st.id}
+                      onMouseDown={(e) => handleStickerDragStart(e, st.id, st.x, st.y)}
+                      onTouchStart={(e) => handleStickerDragStart(e, st.id, st.x, st.y)}
+                      style={{
+                        left: `${st.x}%`,
+                        top: `${st.y}%`,
+                        transform: `translate(-50%, -50%) rotate(${st.rotate}deg)`,
+                      }}
+                      className={`absolute z-30 cursor-move select-none p-2 rounded-xl border border-dashed shadow-md transition-shadow hover:shadow-lg flex flex-col items-center justify-center min-w-[75px] ${stickerDef?.color || "bg-white border-slate-300"}`}
+                    >
+                      <span className="text-2xl pointer-events-none">{stickerDef?.emoji}</span>
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-slate-600 select-none pointer-events-none mt-1">{stickerDef?.label}</span>
+                      
+                      {/* Delete Sticker Icon */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStickers(prev => prev.filter(s => s.id !== st.id));
+                        }}
+                        className="absolute -top-1.5 -right-1.5 h-4.5 w-4.5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow cursor-pointer text-[9px] font-bold"
+                        title="Remove stamp"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+
                 <textarea
                   value={journalNotes}
                   onChange={(e) => setJournalNotes(e.target.value)}
                   placeholder="Today we planned to go to Connaught Place. Must order the special cold brew at Blue Tokai!..."
-                  rows={6}
-                  className="w-full bg-transparent pl-8 border-none text-slate-700 font-scrap text-[1.45rem] leading-[2.15rem] focus:outline-none focus:ring-0 resize-y relative z-10"
+                  rows={8}
+                  className="w-full bg-transparent pl-8 border-none text-slate-700 font-scrap text-[1.45rem] leading-[2.15rem] focus:outline-none focus:ring-0 resize-y relative z-10 min-h-[220px]"
                   style={{
                     backgroundImage: "linear-gradient(rgba(0,0,0,0) 0%, rgba(0,0,0,0) 95%, rgba(0,0,0,0.06) 95%, rgba(0,0,0,0.06) 100%)",
                     backgroundSize: "100% 2.15rem",

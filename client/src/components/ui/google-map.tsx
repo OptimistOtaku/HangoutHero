@@ -71,9 +71,34 @@ export function GoogleMap({ activities, location }: GoogleMapProps) {
         zoom: 13,
         styles: [
           {
-            featureType: "all",
+            featureType: "landscape",
             elementType: "geometry",
-            stylers: [{ saturation: -20 }, { lightness: 10 }]
+            stylers: [{ color: "#f5f2e9" }]
+          },
+          {
+            featureType: "water",
+            elementType: "geometry",
+            stylers: [{ color: "#d2dfdb" }]
+          },
+          {
+            featureType: "poi.park",
+            elementType: "geometry",
+            stylers: [{ color: "#e3e8e1" }]
+          },
+          {
+            featureType: "road",
+            elementType: "geometry",
+            stylers: [{ color: "#ffffff" }]
+          },
+          {
+            featureType: "road.highway",
+            elementType: "geometry",
+            stylers: [{ color: "#fae2d0" }]
+          },
+          {
+            featureType: "administrative",
+            elementType: "labels.text.fill",
+            stylers: [{ color: "#7a6f5d" }]
           },
           {
             featureType: "poi",
@@ -91,8 +116,8 @@ export function GoogleMap({ activities, location }: GoogleMapProps) {
         suppressMarkers: true,
         polylineOptions: {
           strokeColor: "#FF385C",
-          strokeWeight: 4,
-          strokeOpacity: 0.8
+          strokeWeight: 6,
+          strokeOpacity: 0.85
         }
       });
       setDirectionsRenderer(renderer);
