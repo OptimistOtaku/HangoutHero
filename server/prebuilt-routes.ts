@@ -2,22 +2,23 @@ import type { InsertPrebuiltRoute } from "../shared/schema.js";
 
 const images = {
   delhi:
-    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/delhi.jpg?width=800&quality=85",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/object/public/carousel-images/delhi.webp",
   noida:
-    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/noida.jpg?width=800&quality=85",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/object/public/carousel-images/noida.webp",
   jaipur:
-    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/jaipur.jpg?width=800&quality=85",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/object/public/carousel-images/jaipur.webp",
   mussoorie:
-    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/mussoorie.jpg?width=800&quality=85",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/object/public/carousel-images/mussoorie.webp",
   goa:
-    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/goa.jpg?width=800&quality=85",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/object/public/carousel-images/goa.webp",
   cafe:
-    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/cafe.jpg?width=600&quality=85",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/object/public/carousel-images/cafe.webp",
   market:
-    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/market.jpg?width=600&quality=85",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/object/public/carousel-images/market.webp",
   sunset:
-    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/sunset.jpg?width=600&quality=85",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/object/public/carousel-images/sunset.webp",
 };
+
 
 
 export const DEFAULT_PREBUILT_ROUTES: InsertPrebuiltRoute[] = [
