@@ -2,22 +2,23 @@ import type { InsertPrebuiltRoute } from "../shared/schema.js";
 
 const images = {
   delhi:
-    "https://images.unsplash.com/photo-1587474260584-136574528ed5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/delhi.jpg?width=800&quality=85",
   noida:
-    "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=1200&q=80",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/noida.jpg?width=800&quality=85",
   jaipur:
-    "https://images.unsplash.com/photo-1599661046289-e31897846e41?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/jaipur.jpg?width=800&quality=85",
   mussoorie:
-    "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/mussoorie.jpg?width=800&quality=85",
   goa:
-    "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1200&q=80",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/goa.jpg?width=800&quality=85",
   cafe:
-    "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1200&q=80",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/cafe.jpg?width=600&quality=85",
   market:
-    "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&w=1200&q=80",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/market.jpg?width=600&quality=85",
   sunset:
-    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
+    "https://rdmypruvhkqvfdjfohpk.supabase.co/storage/v1/render/image/public/carousel-images/sunset.jpg?width=600&quality=85",
 };
+
 
 export const DEFAULT_PREBUILT_ROUTES: InsertPrebuiltRoute[] = [
   {

@@ -93,10 +93,6 @@ export default function Home() {
 
   useGSAP(
     () => {
-      if (prebuiltRoutes.length === 0) {
-        return;
-      }
-
       const mm = gsap.matchMedia();
 
       mm.add(
@@ -162,6 +158,7 @@ export default function Home() {
     },
     { scope: heroRef }
   );
+
 
   useGSAP(
     () => {
@@ -397,6 +394,7 @@ export default function Home() {
           <div className="hero-polaroid absolute -left-5 top-[25%] z-0 scale-[0.72] sm:left-[4%] sm:scale-90 lg:scale-100">
             <ScrapbookImage
               polaroid
+              priority
               rotation={-8}
               src={previousPlace.image}
               alt={`${previousPlace.name} day out idea`}
@@ -416,12 +414,14 @@ export default function Home() {
           <div className="hero-polaroid absolute -right-7 top-[26%] z-0 scale-[0.72] sm:left-[50%] sm:right-auto sm:scale-90 lg:scale-100">
             <ScrapbookImage
               polaroid
+              priority
               rotation={8}
               src={nextPlace.image}
               alt={`${nextPlace.name} day out idea`}
               caption={`${nextPlace.name}`}
             />
           </div>
+
 
           <div className="hero-note scrapbook-note absolute bottom-0 left-0 right-0 mx-auto max-w-[21rem] p-5 sm:left-0 sm:right-auto sm:max-w-sm sm:p-6 lg:bottom-6">
             <div className="label-chip inline-flex">
