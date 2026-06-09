@@ -32,6 +32,23 @@ export const itineraries = pgTable("itineraries", {
   userIdIdx: index("itineraries_user_id_idx").on(table.userId),
 }));
 
+export const prebuiltRoutes = pgTable("prebuilt_routes", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  city: text("city").notNull(),
+  mood: text("mood").notNull(),
+  stops: text("stops").notNull(),
+  accent: text("accent").notNull(),
+  image: text("image").notNull(),
+  tagline: text("tagline").notNull(),
+  itinerary: jsonb("itinerary").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  slugIdx: index("prebuilt_routes_slug_idx").on(table.slug),
+  sortOrderIdx: index("prebuilt_routes_sort_order_idx").on(table.sortOrder),
+}));
+
 // Defining the shape of the activities and recommendations in the itinerary
 export const activitySchema = z.object({
   id: z.string(),
@@ -75,8 +92,22 @@ export const insertItinerarySchema = createInsertSchema(itineraries).pick({
   notes: true
 });
 
+export const insertPrebuiltRouteSchema = createInsertSchema(prebuiltRoutes).pick({
+  slug: true,
+  city: true,
+  mood: true,
+  stops: true,
+  accent: true,
+  image: true,
+  tagline: true,
+  itinerary: true,
+  sortOrder: true,
+});
+
 export type InsertItinerary = z.infer<typeof insertItinerarySchema>;
 export type Itinerary = typeof itineraries.$inferSelect;
+export type PrebuiltRoute = typeof prebuiltRoutes.$inferSelect;
+export type InsertPrebuiltRoute = z.infer<typeof insertPrebuiltRouteSchema>;
 export type Activity = z.infer<typeof activitySchema>;
 export type Recommendation = z.infer<typeof recommendationSchema>;
 export type ItineraryResponse = z.infer<typeof itineraryResponseSchema>;

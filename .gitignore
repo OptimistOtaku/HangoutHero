@@ -35,3 +35,7 @@ vite.config.ts.*
 
 # Agent tools & skills
 .agents/
+
+# Scratch files
+scratch/
+

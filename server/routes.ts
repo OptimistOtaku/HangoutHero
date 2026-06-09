@@ -273,6 +273,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/prebuilt-itineraries", async (_req: Request, res: Response) => {
+    try {
+      const routes = await storage.getPrebuiltRoutes();
+
+      res.json(routes.map((route) => ({
+        slug: route.slug,
+        city: route.city,
+        mood: route.mood,
+        stops: route.stops,
+        accent: route.accent,
+        image: route.image,
+        tagline: route.tagline,
+      })));
+    } catch (error) {
+      console.error("Error loading prebuilt itineraries:", error);
+      res.status(500).json({ message: "Failed to load prebuilt itineraries" });
+    }
+  });
+
+  app.get("/api/prebuilt-itineraries/:slug", async (req: Request, res: Response) => {
+    try {
+      const route = await storage.getPrebuiltRouteBySlug(String(req.params.slug));
+
+      if (!route) {
+        return res.status(404).json({ message: "Prebuilt itinerary not found" });
+      }
+
+      res.json({
+        slug: route.slug,
+        city: route.city,
+        mood: route.mood,
+        stops: route.stops,
+        accent: route.accent,
+        image: route.image,
+        tagline: route.tagline,
+        itinerary: route.itinerary,
+      });
+    } catch (error) {
+      console.error("Error loading prebuilt itinerary:", error);
+      res.status(500).json({ message: "Failed to load prebuilt itinerary" });
+    }
+  });
+
   // API endpoint to generate an itinerary
   app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
     try {

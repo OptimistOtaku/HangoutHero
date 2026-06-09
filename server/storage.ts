@@ -1,7 +1,18 @@
-import { users, itineraries, type User, type InsertUser, type Itinerary, type InsertItinerary } from "../shared/schema.js";
+import {
+  users,
+  itineraries,
+  prebuiltRoutes,
+  type User,
+  type InsertUser,
+  type Itinerary,
+  type InsertItinerary,
+  type PrebuiltRoute,
+} from "../shared/schema.js";
 import type { ItineraryResponse } from "../client/src/lib/openai";
 import { db } from "./db.js";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
+import { DEFAULT_PREBUILT_ROUTES } from "./prebuilt-routes.js";
+
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -14,19 +25,26 @@ export interface IStorage {
   getAllItineraries(userId?: number): Promise<Itinerary[]>;
   deleteItinerary(id: number): Promise<void>;
   updateItineraryNotes(id: number, notes: string): Promise<Itinerary>;
+  getPrebuiltRoutes(): Promise<PrebuiltRoute[]>;
+  getPrebuiltRouteBySlug(slug: string): Promise<PrebuiltRoute | undefined>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private itineraries: Map<number, { itinerary: ItineraryResponse; userId?: number }>;
+  private prebuiltRoutes: Map<string, PrebuiltRoute>;
   currentId: number;
   currentItineraryId: number;
+  currentPrebuiltRouteId: number;
 
   constructor() {
     this.users = new Map();
     this.itineraries = new Map();
+    this.prebuiltRoutes = new Map();
     this.currentId = 1;
     this.currentItineraryId = 1;
+    this.currentPrebuiltRouteId = 1;
+    this.seedPrebuiltRoutes();
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -121,6 +139,25 @@ export class MemStorage implements IStorage {
       notes: updatedItinerary.notes || null,
     };
   }
+
+  async getPrebuiltRoutes(): Promise<PrebuiltRoute[]> {
+    return Array.from(this.prebuiltRoutes.values()).sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  async getPrebuiltRouteBySlug(slug: string): Promise<PrebuiltRoute | undefined> {
+    return this.prebuiltRoutes.get(slug);
+  }
+
+  private seedPrebuiltRoutes() {
+    DEFAULT_PREBUILT_ROUTES.forEach((route) => {
+      this.prebuiltRoutes.set(route.slug, {
+        ...route,
+        id: this.currentPrebuiltRouteId++,
+        sortOrder: route.sortOrder || 0,
+        createdAt: new Date(),
+      });
+    });
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -205,6 +242,17 @@ export class DatabaseStorage implements IStorage {
     if (!db) throw new Error("Database not configured");
     const result = await db.update(itineraries).set({ notes }).where(eq(itineraries.id, id)).returning();
     if (result.length === 0) throw new Error("Itinerary not found");
+    return result[0];
+  }
+
+  async getPrebuiltRoutes(): Promise<PrebuiltRoute[]> {
+    if (!db) throw new Error("Database not configured");
+    return await db.select().from(prebuiltRoutes).orderBy(asc(prebuiltRoutes.sortOrder));
+  }
+
+  async getPrebuiltRouteBySlug(slug: string): Promise<PrebuiltRoute | undefined> {
+    if (!db) throw new Error("Database not configured");
+    const result = await db.select().from(prebuiltRoutes).where(eq(prebuiltRoutes.slug, slug)).limit(1);
     return result[0];
   }
 }
