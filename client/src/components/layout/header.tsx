@@ -239,12 +239,11 @@ export default function Header() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-3 py-3 md:px-8 md:py-4">
           <Link href="/">
             <div className="flex cursor-pointer items-center gap-3 md:gap-4" onClick={() => setIsMenuOpen(false)}>
-              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-primary text-white shadow-[0_14px_30px_rgba(255,56,92,0.25)] md:h-14 md:w-14 md:rounded-2xl">
-                <MapPin className="h-5 w-5 fill-white md:h-6 md:w-6" />
-                <div className="absolute -right-2 -top-2 rounded-full bg-[#fff1a8] p-1 text-primary">
-                  <Sparkles className="h-3.5 w-3.5" />
-                </div>
-              </div>
+              <img
+                src="/favicon.png"
+                alt="HangoutHero Logo"
+                className="h-12 w-12 shrink-0 rounded-[14px] shadow-[0_10px_24px_rgba(255,56,92,0.18)] md:h-16 md:w-16 md:rounded-2xl"
+              />
               <div>
                 <p className="font-heading text-[1.28rem] font-extrabold leading-none text-[#101218] md:text-[2rem]">
                   HangoutHero
@@ -253,6 +252,7 @@ export default function Header() {
               </div>
             </div>
           </Link>
+
 
           <nav className="hidden items-center gap-8 md:flex">
             {navItems.map((item) => (
