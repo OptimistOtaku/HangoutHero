@@ -14,6 +14,7 @@ import Results from "@/pages/results";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 function Router() {
   const [location] = useLocation();
@@ -45,6 +46,7 @@ function App() {
             <Toaster />
             <Router />
             <Analytics />
+            <SpeedInsights />
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>
