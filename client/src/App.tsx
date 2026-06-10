@@ -13,6 +13,7 @@ import Loading from "@/pages/loading";
 import Results from "@/pages/results";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
+import { Analytics } from "@vercel/analytics/react";
 
 function Router() {
   const [location] = useLocation();
@@ -43,6 +44,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Router />
+            <Analytics />
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>
