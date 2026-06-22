@@ -4,6 +4,7 @@ import { MapPin, Menu, Sparkles, X, LogOut, Bookmark, Calendar, Globe, Trash2 } 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { StickyNotePopup } from "@/components/ui/sticky-note-popup";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -423,6 +424,7 @@ export default function Header() {
             </nav>
           </div>
         )}
+        <StickyNotePopup />
       </header>
 
       {/* Slide-out Scrapbook Sheet */}

@@ -11,6 +11,7 @@ import { GoogleMap } from "@/components/ui/google-map";
 import { WeatherWidget } from "@/components/ui/weather-widget";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
+import { CITY_CARDS } from "@/lib/city-data";
 import {
   Dialog,
   DialogContent,
@@ -23,12 +24,13 @@ export default function Results() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showPolaroid, setShowPolaroid] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const { user, loginWithGoogle } = useAuth();
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
     const loadItinerary = async () => {
@@ -242,26 +244,34 @@ export default function Results() {
   };
 
   const persistItinerary = async () => {
+    console.log("[DEBUG] persistItinerary called, itinerary:", itinerary, "user:", user);
     if (!itinerary) return null;
     // Only return the existing ID if it is already owned by this user
     if (itinerary.id && itinerary.userId && user && itinerary.userId === user.id) {
+      console.log("[DEBUG] Itinerary already owned and saved, id:", itinerary.id);
       return itinerary.id;
     }
 
     setIsSaving(true);
     try {
+      console.log("[DEBUG] Calling saveItinerary API...");
       const result = await saveItinerary(itinerary, user?.id);
+      console.log("[DEBUG] saveItinerary API success, result:", result);
       const updatedItinerary = { ...itinerary, id: result.id, userId: user?.id };
       setItinerary(updatedItinerary);
       setIsSaved(true);
       sessionStorage.setItem("itineraryData", JSON.stringify(updatedItinerary));
       return result.id;
+    } catch (e) {
+      console.error("[DEBUG] saveItinerary API error:", e);
+      throw e;
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleShare = async () => {
+  const handleCopyShareLink = async () => {
+    console.log("[DEBUG] handleCopyShareLink called");
     if (!itinerary) return;
 
     try {
@@ -294,11 +304,24 @@ export default function Results() {
     }
   };
 
+  const handleShareClick = () => {
+    console.log("[DEBUG] handleShareClick called. user:", user, "showLoginPrompt before:", showLoginPrompt);
+    if (!user) {
+      setShowLoginPrompt(true);
+      console.log("[DEBUG] Set showLoginPrompt to true");
+    } else {
+      setShowPolaroid(true);
+      console.log("[DEBUG] Set showPolaroid to true");
+    }
+  };
+
   const handleSave = async () => {
+    console.log("[DEBUG] handleSave called. itinerary:", itinerary, "isSaved:", isSaved, "user:", user);
     if (!itinerary || isSaved) return;
 
     if (!user) {
       setShowLoginPrompt(true);
+      console.log("[DEBUG] Set showLoginPrompt to true due to guest user");
       return;
     }
 
@@ -328,6 +351,8 @@ export default function Results() {
     }
   };
 
+
+
   // Automatically save if user logs in via the prompt and itinerary is not yet saved
   useEffect(() => {
     if (user && showLoginPrompt && itinerary && !isSaved) {
@@ -335,6 +360,8 @@ export default function Results() {
       handleSave();
     }
   }, [user, showLoginPrompt, itinerary, isSaved]);
+
+  console.log("[DEBUG] Results render. showLoginPrompt:", showLoginPrompt, "showPolaroid:", showPolaroid, "user:", user);
 
   if (isLoading || !itinerary) {
     return (
@@ -373,7 +400,7 @@ export default function Results() {
                   <Button
                     variant="outline"
                     className="rounded-full border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:border-primary sm:px-5 sm:text-base"
-                    onClick={handleShare}
+                    onClick={handleShareClick}
                   >
                     Share
                   </Button>
@@ -568,41 +595,137 @@ export default function Results() {
           </div>
         </motion.div>
 
-        <Dialog open={showLoginPrompt} onOpenChange={setShowLoginPrompt}>
-          <DialogContent className="rounded-3xl border border-[rgba(244,208,63,0.45)] bg-[rgba(255,250,242,0.98)] p-6 shadow-2xl backdrop-blur-md max-w-sm">
-            <DialogHeader>
-              <DialogTitle className="font-heading text-3xl font-extrabold text-[#111318] text-center flex flex-col items-center gap-3">
-                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-white shadow-lg">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
-                  </svg>
-                </div>
-                Save to profile
-              </DialogTitle>
-              <DialogDescription className="text-center text-slate-600 text-sm leading-relaxed mt-4">
-                Authenticate with Google to permanently preserve this personalized hangout route, track your past explorations, and access them from any device.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-6 flex flex-col gap-3">
-              <Button
-                onClick={handleLoginAndSave}
-                className="h-12 rounded-full bg-primary font-bold text-white hover:bg-[#ff5977] text-sm flex items-center justify-center gap-3 shadow-md"
-              >
-                <svg className="h-5 w-5 fill-white" viewBox="0 0 24 24">
-                  <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.1-5.136 4.1A5.69 5.69 0 018.25 12.8a5.69 5.69 0 015.741-5.7 5.6 5.6 0 013.9 1.505l3.19-3.19A9.914 9.914 0 0013.99 2.25c-5.52 0-10 4.48-10 10s4.48 10 10 10c5.77 0 10.02-4.06 10.02-10.18 0-.68-.061-1.33-.18-1.785H12.24z" />
-                </svg>
-                Sign in with Google
-              </Button>
-              <Button
-                variant="outline"
+        {showLoginPrompt && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowLoginPrompt(false)}
+          >
+            <div 
+              className="rounded-sm border border-[#f5dba2] bg-[#fffdeb] p-8 shadow-2xl max-w-sm w-full relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <button 
                 onClick={() => setShowLoginPrompt(false)}
-                className="h-11 rounded-full border-slate-300 bg-white font-semibold text-slate-700 hover:border-primary text-xs"
+                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 font-bold text-sm"
+                title="Close"
               >
-                Cancel
-              </Button>
+                ✕
+              </button>
+
+              {/* Scrapbook Washi Tape Strip on the dialog top edge */}
+              <div
+                className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-4.5 opacity-90 rotate-[-1deg] z-10 select-none pointer-events-none"
+                style={{
+                  background: "repeating-linear-gradient(45deg, rgba(255, 56, 92, 0.1) 0px, rgba(255, 56, 92, 0.1) 6px, rgba(255, 56, 92, 0.22) 6px, rgba(255, 56, 92, 0.22) 12px)",
+                  borderLeft: "1px dashed rgba(245, 219, 162, 0.8)",
+                  borderRight: "1px dashed rgba(245, 219, 162, 0.8)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                }}
+              />
+
+              <div className="pt-2 text-center">
+                <h3 className="font-scrap text-4xl font-bold text-[#4a3728]">
+                  Stamp Your Passport! 🎒
+                </h3>
+                <p className="font-scrap text-xl text-[#322519] leading-snug mt-3">
+                  Authenticate your Voyager Passport to preserve this custom route, collect ranks, and unlock Polaroid postcards.
+                </p>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3">
+                <button
+                  onClick={handleLoginAndSave}
+                  className="w-full h-10 rounded bg-[#fffdf0] border border-dashed border-[#4a3728]/60 hover:border-[#4a3728] hover:bg-[#fffcda] active:scale-[0.98] text-[#4a3728] transition-all duration-300 font-scrap text-2xl font-bold flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <svg className="h-4 w-4 fill-[#4a3728]" viewBox="0 0 24 24">
+                    <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.1-5.136 4.1A5.69 5.69 0 018.25 12.8a5.69 5.69 0 015.741-5.7 5.6 5.6 0 013.9 1.505l3.19-3.19A9.914 9.914 0 0013.99 2.25c-5.52 0-10 4.48-10 10s4.48 10 10 10c5.77 0 10.02-4.06 10.02-10.18 0-.68-.061-1.33-.18-1.785H12.24z" />
+                  </svg>
+                  Stamp Passport (Free)
+                </button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowLoginPrompt(false)}
+                  className="h-9 font-scrap text-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
+                >
+                  Maybe Later
+                </Button>
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        )}
+
+        {showPolaroid && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowPolaroid(false)}
+          >
+            <div 
+              className="max-w-xs w-full p-6 bg-white border border-[#f5dba2] shadow-2xl rounded-sm flex flex-col items-center relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <button 
+                onClick={() => setShowPolaroid(false)}
+                className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 font-bold text-sm"
+                title="Close"
+              >
+                ✕
+              </button>
+
+              <div className="bg-[#fcfbf9] p-3 shadow-md border border-slate-200/60 flex flex-col items-center w-full aspect-[4/5]">
+                <div className="w-full aspect-square overflow-hidden bg-slate-100 relative rounded-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)]">
+                  <img 
+                    src={
+                      CITY_CARDS.find(
+                        (c) => c.name.toLowerCase() === itinerary.location.toLowerCase()
+                      )?.image || "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=500"
+                    } 
+                    alt={itinerary.location} 
+                    className="w-full h-full object-cover" 
+                  />
+                  <div className="absolute top-2 left-2 bg-white/80 px-2 py-0.5 rounded text-[10px] font-bold text-slate-800 uppercase tracking-wider">
+                    📍 {itinerary.location}
+                  </div>
+                </div>
+                <div className="pt-4 pb-2 w-full text-center">
+                  <p className="font-scrap text-3xl text-[#4a3728] leading-tight font-bold">
+                    {itinerary.title}
+                  </p>
+                  <p className="text-[9px] font-heading font-bold uppercase text-slate-400 mt-2 tracking-widest">
+                    Stamp ID: #{itinerary.id || "TEMP"} • @{user?.username?.split("@")[0]}
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-[11px] font-scrap text-[#4a3728] text-center mt-3 leading-relaxed px-2">
+                "A snapshot of your custom traveler scrapbook page, ready to export and share."
+              </p>
+
+              <div className="mt-4 flex flex-col gap-2 w-full">
+                <Button
+                  className="w-full h-8.5 rounded-full bg-primary text-white font-bold text-xs"
+                  onClick={handleCopyShareLink}
+                >
+                  Copy Share Link 🔗
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full h-8.5 rounded-full border-slate-300 font-semibold text-slate-700 text-xs bg-white"
+                  onClick={() => {
+                    toast({
+                      title: "Postcard Generated! 📸",
+                      description: "Your polaroid memory postcard is downloaded to your device.",
+                    });
+                    setShowPolaroid(false);
+                  }}
+                >
+                  Download Polaroid Memory
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
