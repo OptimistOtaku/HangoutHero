@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { generateItinerary, PreferenceFormData, LocationFormData } from "@/lib/openai";
+import { generateItinerary, PreferenceFormData, LocationFormData, SeedRecommendation } from "@/lib/openai";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { WandSparkles } from "lucide-react";
@@ -37,9 +37,14 @@ export default function Loading() {
 
         const preferenceData: PreferenceFormData = JSON.parse(preferenceDataStr);
         const locationData: LocationFormData = JSON.parse(locationDataStr);
-        const itinerary = await generateItinerary(preferenceData, locationData);
+        const seedRecommendationStr = sessionStorage.getItem("seedRecommendation");
+        const seedRecommendation: SeedRecommendation | undefined = seedRecommendationStr
+          ? JSON.parse(seedRecommendationStr)
+          : undefined;
+        const itinerary = await generateItinerary(preferenceData, locationData, seedRecommendation);
 
         sessionStorage.setItem("itineraryData", JSON.stringify(itinerary));
+        sessionStorage.removeItem("seedRecommendation");
 
         setTimeout(() => {
           setLocation("/results");

@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { z } from "zod";
 import { GoogleGenAI } from "@google/genai";
+import { getCandidatesForLocation, getTrendingCandidates, type CityCandidate } from "./city-candidates.js";
+import { rankCandidates, scorePlace, buildCandidateMatchReasons } from "./recommendation-scoring.js";
 
 // Validation schemas
 const preferenceSchema = z.object({
@@ -21,11 +23,30 @@ const locationSchema = z.object({
 
 const generateItinerarySchema = z.object({
   preferences: preferenceSchema,
-  locationData: locationSchema
+  locationData: locationSchema,
+  userId: z.number().optional(),
+  seedRecommendation: z.object({
+    city: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    mood: z.array(z.string()).optional(),
+    duration: z.string().optional(),
+    budget: z.string().optional(),
+    seedPlaces: z.array(z.string()).optional(),
+    title: z.string().optional(),
+  }).optional()
 });
 
 const placePhotoCache = new Map<string, { body: Buffer; contentType: string; expiresAt: number }>();
 const PLACE_PHOTO_CACHE_MS = 1000 * 60 * 60 * 24;
+const recommendationEvents: Array<{
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  userId?: number;
+  itineraryId?: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}> = [];
 
 // Types for API response
 interface ItineraryActivity {
@@ -39,6 +60,13 @@ interface ItineraryActivity {
   rating: string;
   timeOfDay: "morning" | "afternoon" | "evening";
   type: string;
+  score?: number;
+  matchReasons?: string[];
+  tags?: string[];
+  noveltyLevel?: "iconic" | "popular-local" | "hidden-gem" | "niche";
+  neighborhood?: string;
+  indoorOutdoor?: "indoor" | "outdoor" | "mixed";
+  trendScore?: number;
 }
 
 interface Recommendation {
@@ -48,6 +76,22 @@ interface Recommendation {
   image: string;
   rating: string;
   duration: string;
+  score?: number;
+  matchReasons?: string[];
+  tags?: string[];
+  noveltyLevel?: "iconic" | "popular-local" | "hidden-gem" | "niche";
+  neighborhood?: string;
+  indoorOutdoor?: "indoor" | "outdoor" | "mixed";
+  trendScore?: number;
+  seedRecommendation?: {
+    city?: string;
+    tags?: string[];
+    mood?: string[];
+    duration?: string;
+    budget?: string;
+    seedPlaces?: string[];
+    title?: string;
+  };
 }
 
 interface ItineraryResponse {
@@ -316,13 +360,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/trending-places", async (req: Request, res: Response) => {
+    const city = String(req.query.city || req.query.location || "Delhi").trim();
+    const limit = Math.min(Number(req.query.limit || 10), 20);
+
+    try {
+      const stored = await storage.getTrendingPlaces(city, limit);
+
+      if (stored.length > 0) {
+        return res.json(stored);
+      }
+
+      return res.json(
+        getTrendingCandidates(city, limit).map((candidate) => ({
+          city: candidate.city,
+          placeId: candidate.id,
+          title: candidate.title,
+          category: candidate.type,
+          score: candidate.trendScore,
+          metadata: {
+            neighborhood: candidate.neighborhood,
+            location: candidate.address,
+            tags: candidate.tags,
+            trendReason: candidate.trendReason,
+            noveltyLevel: candidate.noveltyLevel,
+            indoorOutdoor: candidate.indoorOutdoor,
+          },
+        }))
+      );
+    } catch (error) {
+      console.error("Error loading trending places:", error);
+      res.status(500).json({ message: "Failed to load trending places" });
+    }
+  });
+
+  app.post("/api/recommendation-events", async (req: Request, res: Response) => {
+    try {
+      const payload = z.object({
+        userId: z.number().optional(),
+        itineraryId: z.number().optional(),
+        eventType: z.string(),
+        entityType: z.string().optional(),
+        entityId: z.string().optional(),
+        city: z.string().optional(),
+        candidateId: z.string().optional(),
+        activityId: z.string().optional(),
+        recommendationId: z.string().optional(),
+        source: z.string().optional(),
+        metadata: z.record(z.unknown()).optional(),
+      }).parse(req.body);
+
+      const saved = await storage.recordRecommendationEvent({
+        userId: payload.userId,
+        itineraryId: payload.itineraryId,
+        eventType: payload.eventType,
+        city: payload.city,
+        candidateId: payload.candidateId,
+        activityId: payload.activityId,
+        recommendationId: payload.recommendationId || payload.entityId,
+        source: payload.source || payload.entityType,
+        metadata: payload.metadata,
+      });
+
+      recommendationEvents.push({
+        eventType: payload.eventType,
+        entityType: payload.entityType || payload.source || "unknown",
+        entityId: payload.entityId || payload.recommendationId || payload.activityId || payload.candidateId || "",
+        userId: payload.userId,
+        itineraryId: payload.itineraryId,
+        metadata: payload.metadata,
+        createdAt: saved.createdAt.toISOString(),
+      });
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Error recording recommendation event:", error);
+      res.status(400).json({ message: "Invalid recommendation event" });
+    }
+  });
+
   // API endpoint to generate an itinerary
   app.post("/api/generate-itinerary", async (req: Request, res: Response) => {
     try {
       // Validate request body
-      const { preferences, locationData } = generateItinerarySchema.parse(req.body);
+      const { preferences, locationData, userId, seedRecommendation } = generateItinerarySchema.parse(req.body);
       
       console.log("Generating itinerary for", locationData.location);
+      const cacheKey = buildItineraryCacheKey(preferences, locationData, seedRecommendation);
+      const cached = await storage.getItineraryCache(cacheKey);
+      const rankedCandidates = rankCandidates(
+        buildGenerationCandidates(locationData.location, seedRecommendation),
+        preferences,
+        locationData,
+        18
+      );
       
       // Initialize itinerary data with default
       let itineraryData: ItineraryResponse = {
@@ -347,6 +478,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Prepare the prompt for Gemini
         const groupSize = preferences.groupSize || "Solo";
         const moods = preferences.mood?.length ? preferences.mood.join(", ") : "Relaxed";
+        const candidateBrief = formatCandidatesForPrompt(rankedCandidates);
+        const cacheBrief = cached
+          ? `\nA similar cached itinerary exists. Use it only as inspiration, then refresh 1-2 stops if the candidate pool gives a better fit:\n${JSON.stringify((cached.itinerary as any), null, 2).slice(0, 5000)}\n`
+          : "";
+        const seedBrief = seedRecommendation
+          ? `\nThe user clicked this recommendation as the seed for the new route: ${JSON.stringify(seedRecommendation)}\n`
+          : "";
 
         const prompt = `You are an expert travel planner with deep knowledge of Indian locations. You create detailed, realistic itineraries based on user preferences.
 
@@ -360,6 +498,10 @@ Preferences:
 - Vibe/Mood: ${moods}
 - Maximum travel distance: ${locationData.distance}
 - Transportation: ${locationData.transportation.join(", ")}
+${seedBrief}
+Grounded candidate places, ranked by local preference fit and trend signals:
+${candidateBrief}
+${cacheBrief}
 
 IMPORTANT: Tailor the itinerary to the GROUP SIZE and VIBE/MOOD:
 - For "Solo": Focus on safe, welcoming places good for solo travelers
@@ -368,6 +510,14 @@ IMPORTANT: Tailor the itinerary to the GROUP SIZE and VIBE/MOOD:
 - For "Large Group" (6+): Focus on spacious venues, group-friendly spots, easy logistics
 
 Match the activities to the VIBE/MOOD selected - if "Romantic", prioritize couples activities; if "Adventurous", prioritize active/exciting options; if "Foodie", prioritize culinary experiences; etc.
+
+Discovery and novelty requirements:
+- Prefer the grounded candidate places when they fit, and sequence them into a realistic route.
+- Include at least 2 lesser-known, niche, local, or neighborhood-specific places when the candidate pool supports it.
+- Include at least 1 place locals would realistically recommend but first-time travel blogs may miss.
+- Avoid filling the plan with only famous city defaults. Use a 40% iconic / 60% fresh-local target unless the user clearly asked for iconic sightseeing.
+- Do not invent fake venues. If unsure about a place name, use a neighborhood/activity description instead.
+- Make trending places a boost, not an override; they still need to fit the user's mood, budget, group size, distance, and transport.
 
 Please generate a complete itinerary with realistic locations, descriptions, and timeline.
 The response must be valid JSON format only (no markdown, no code blocks) and include:
@@ -383,7 +533,13 @@ The response must be valid JSON format only (no markdown, no code blocks) and in
    - Rating (e.g., "4.8 ★")
    - Type (one of: "exploring", "eating", "historical", "cafe")
    - Time of day category ("morning", "afternoon", or "evening")
-4. Three relevant recommended similar adventures with id, title, description, rating, and duration.
+   - tags (array of strings)
+   - matchReasons (array of 2-4 short strings)
+   - noveltyLevel ("iconic", "popular-local", "hidden-gem", or "niche")
+   - neighborhood
+   - indoorOutdoor ("indoor", "outdoor", or "mixed")
+   - trendScore (number 0-100 when known)
+4. Three relevant recommended similar adventures with id, title, description, rating, duration, tags, matchReasons, noveltyLevel, neighborhood, indoorOutdoor, trendScore, and seedRecommendation.
 
 Make activities specific to the location, realistic, and based on actual venues. Include exact addresses.
 Format all times appropriately. Make sure descriptions are engaging and 1-2 sentences long.
@@ -414,8 +570,10 @@ Return only valid JSON without any markdown formatting or code blocks.`;
         itineraryData = normalizeGeneratedItinerary(
           JSON.parse(responseText),
           preferences,
-          locationData
+          locationData,
+          rankedCandidates
         );
+        itineraryData = improveItineraryWithScoring(itineraryData, preferences, locationData, rankedCandidates);
         console.log("Successfully generated personalized itinerary using Gemini 2.5 Flash");
         
       } catch (apiError) {
@@ -972,12 +1130,21 @@ Return only valid JSON without any markdown formatting or code blocks.`;
 
         itineraryData = itineraries[locationToUse];
       }
+      itineraryData = improveItineraryWithScoring(itineraryData, preferences, locationData, rankedCandidates);
       
       itineraryData = withGooglePlaceImages(itineraryData, locationData.location);
 
       // Save the generated itinerary to storage
       try {
-        const savedItinerary = await storage.saveItinerary(itineraryData);
+        await storage.saveItineraryCache({
+          cacheKey,
+          city: locationData.location,
+          preferences: { preferences, locationData, seedRecommendation },
+          itinerary: itineraryData as any,
+          expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+        });
+
+        const savedItinerary = await storage.saveItinerary(itineraryData, userId);
         console.log("Generated itinerary saved with ID:", savedItinerary.id);
         
         // Send the response with itinerary ID included
@@ -1196,7 +1363,8 @@ Return only valid JSON without any markdown formatting or code blocks.`;
 function normalizeGeneratedItinerary(
   generatedData: any,
   preferences: z.infer<typeof preferenceSchema>,
-  locationData: z.infer<typeof locationSchema>
+  locationData: z.infer<typeof locationSchema>,
+  rankedCandidates: Array<CityCandidate & { score: number; matchReasons: string[] }> = []
 ): ItineraryResponse {
   const activitiesSource =
     generatedData.activities ||
@@ -1225,6 +1393,13 @@ function normalizeGeneratedItinerary(
           rating: String(activity.rating || "4.6 ★"),
           timeOfDay,
           type,
+          score: numberOrUndefined(activity.score),
+          matchReasons: normalizeStringArray(activity.matchReasons || activity.match_reasons || activity.whyThisFits),
+          tags: normalizeStringArray(activity.tags),
+          noveltyLevel: normalizeNoveltyLevel(activity.noveltyLevel || activity.novelty_level),
+          neighborhood: optionalString(activity.neighborhood),
+          indoorOutdoor: normalizeIndoorOutdoor(activity.indoorOutdoor || activity.indoor_outdoor),
+          trendScore: numberOrUndefined(activity.trendScore || activity.trend_score),
         };
       })
     : [];
@@ -1234,7 +1409,7 @@ function normalizeGeneratedItinerary(
       ? generatedActivities
       : [
           ...generatedActivities,
-          ...buildFallbackActivities(locationData.location).slice(generatedActivities.length),
+          ...buildFallbackActivities(locationData.location, rankedCandidates).slice(generatedActivities.length),
         ];
 
   const recommendationsSource =
@@ -1252,6 +1427,22 @@ function normalizeGeneratedItinerary(
         image: String(rec.image || getRandomImageForCategory("historical landmarks")),
         rating: String(rec.rating || "4.7 ★"),
         duration: String(rec.duration || preferences.duration),
+        score: numberOrUndefined(rec.score),
+        matchReasons: normalizeStringArray(rec.matchReasons || rec.match_reasons || rec.whyThisFits),
+        tags: normalizeStringArray(rec.tags),
+        noveltyLevel: normalizeNoveltyLevel(rec.noveltyLevel || rec.novelty_level),
+        neighborhood: optionalString(rec.neighborhood),
+        indoorOutdoor: normalizeIndoorOutdoor(rec.indoorOutdoor || rec.indoor_outdoor),
+        trendScore: numberOrUndefined(rec.trendScore || rec.trend_score),
+        seedRecommendation: rec.seedRecommendation || rec.seed_recommendation || {
+          city: locationData.location,
+          tags: normalizeStringArray(rec.tags),
+          mood: preferences.mood || [],
+          duration: String(rec.duration || preferences.duration),
+          budget: preferences.budget,
+          seedPlaces: normalizeStringArray(rec.seedPlaces || rec.seed_places || rec.title),
+          title: String(rec.title || `More ${locationData.location} ideas`),
+        },
       }))
     : [];
 
@@ -1265,7 +1456,7 @@ function normalizeGeneratedItinerary(
     activities,
     recommendations: recommendations.length > 0
       ? recommendations
-      : buildFallbackRecommendations(locationData.location, preferences.duration),
+      : buildFallbackRecommendations(locationData.location, preferences.duration, rankedCandidates, preferences),
   };
 }
 
@@ -1318,8 +1509,241 @@ function categoryForActivityType(type: string): string {
   return categoryMap[type] || "city exploration";
 }
 
-function buildFallbackRecommendations(location: string, duration: string): Recommendation[] {
-  return [
+function buildGenerationCandidates(
+  location: string,
+  seedRecommendation?: z.infer<typeof generateItinerarySchema>["seedRecommendation"]
+): CityCandidate[] {
+  const candidates = getCandidatesForLocation(seedRecommendation?.city || location);
+
+  if (!seedRecommendation?.tags?.length && !seedRecommendation?.seedPlaces?.length) {
+    return candidates;
+  }
+
+  const seedTerms = new Set([
+    ...(seedRecommendation.tags || []),
+    ...(seedRecommendation.seedPlaces || []),
+    seedRecommendation.title,
+  ].filter(Boolean).map((value) => String(value).toLowerCase()));
+
+  return [...candidates].sort((a, b) => seedAffinity(b, seedTerms) - seedAffinity(a, seedTerms));
+}
+
+function seedAffinity(candidate: CityCandidate, seedTerms: Set<string>): number {
+  const searchable = [
+    candidate.title,
+    candidate.neighborhood,
+    candidate.type,
+    candidate.noveltyLevel,
+    ...candidate.tags,
+    ...candidate.moodTags,
+  ].join(" ").toLowerCase();
+
+  let score = 0;
+  seedTerms.forEach((term) => {
+    if (searchable.includes(term)) score += 1;
+  });
+  return score;
+}
+
+function formatCandidatesForPrompt(candidates: Array<CityCandidate & { score: number; matchReasons: string[] }>): string {
+  if (candidates.length === 0) {
+    return "No curated candidates available. Generate cautiously using verified, findable places.";
+  }
+
+  return candidates.map((candidate, index) => (
+    `${index + 1}. ${candidate.title} | ${candidate.neighborhood} | ${candidate.address} | type=${candidate.type} | novelty=${candidate.noveltyLevel} | budget=${candidate.budgetTier} | groupFit=${candidate.groupFit.join(", ")} | indoorOutdoor=${candidate.indoorOutdoor} | trendScore=${candidate.trendScore} | score=${candidate.score} | tags=${candidate.tags.join(", ")} | reasons=${candidate.matchReasons.join(", ")}`
+  )).join("\n");
+}
+
+function buildItineraryCacheKey(
+  preferences: z.infer<typeof preferenceSchema>,
+  locationData: z.infer<typeof locationSchema>,
+  seedRecommendation?: z.infer<typeof generateItinerarySchema>["seedRecommendation"]
+): string {
+  const parts = [
+    locationData.location,
+    [...preferences.hangoutTypes].sort().join("+"),
+    [...(preferences.mood || [])].sort().join("+"),
+    preferences.duration,
+    preferences.budget,
+    preferences.groupSize || "Solo",
+    locationData.distance,
+    [...locationData.transportation].sort().join("+"),
+    seedRecommendation?.title || "",
+  ];
+
+  return parts.map((part) => String(part).trim().toLowerCase().replace(/\s+/g, "-")).join("|");
+}
+
+function improveItineraryWithScoring(
+  itinerary: ItineraryResponse,
+  preferences: z.infer<typeof preferenceSchema>,
+  locationData: z.infer<typeof locationSchema>,
+  rankedCandidates: Array<CityCandidate & { score: number; matchReasons: string[] }>
+): ItineraryResponse {
+  const usedTitles = new Set<string>();
+  const fallbackPool = rankedCandidates.filter((candidate) => !usedTitles.has(candidate.title.toLowerCase()));
+
+  const activities = itinerary.activities.slice(0, 6).map((activity, index) => {
+    const key = activity.title.toLowerCase();
+    const duplicate = usedTitles.has(key);
+    usedTitles.add(key);
+
+    if (duplicate && fallbackPool[index]) {
+      return activityFromCandidate(fallbackPool[index], index);
+    }
+
+    const score = scorePlace(activity, preferences, locationData);
+    return {
+      ...activity,
+      score: activity.score ?? score.score,
+      matchReasons: normalizeStringArray(activity.matchReasons).length
+        ? normalizeStringArray(activity.matchReasons)
+        : score.matchReasons,
+    };
+  });
+
+  const filledActivities = activities.length >= 6
+    ? activities
+    : [
+        ...activities,
+        ...rankedCandidates.slice(activities.length, 6).map((candidate, index) =>
+          activityFromCandidate(candidate, activities.length + index)
+        ),
+      ];
+
+  const recommendations = itinerary.recommendations.slice(0, 3).map((recommendation, index) => {
+    const score = scorePlace(recommendation, preferences, locationData);
+    return {
+      ...recommendation,
+      score: recommendation.score ?? score.score,
+      matchReasons: normalizeStringArray(recommendation.matchReasons).length
+        ? normalizeStringArray(recommendation.matchReasons)
+        : score.matchReasons,
+      seedRecommendation: recommendation.seedRecommendation || {
+        city: locationData.location,
+        tags: recommendation.tags || [],
+        mood: preferences.mood || [],
+        duration: recommendation.duration,
+        budget: preferences.budget,
+        seedPlaces: [recommendation.title],
+        title: recommendation.title,
+      },
+    };
+  });
+
+  return {
+    ...itinerary,
+    activities: filledActivities,
+    recommendations: recommendations.length > 0
+      ? recommendations
+      : buildFallbackRecommendations(locationData.location, preferences.duration, rankedCandidates, preferences),
+  };
+}
+
+function activityFromCandidate(candidate: CityCandidate & { score: number; matchReasons: string[] }, index: number): ItineraryActivity {
+  return {
+    id: `candidate-act-${index + 1}`,
+    time: defaultTimeForIndex(index),
+    title: candidate.title,
+    description: `${candidate.trendReason} It fits the route with a ${candidate.noveltyLevel.replace("-", " ")} stop in ${candidate.neighborhood}.`,
+    location: candidate.address,
+    image: getRandomImageForCategory(candidate.imageCategory),
+    price: priceForCandidate(candidate),
+    rating: candidate.rating,
+    timeOfDay: normalizeTimeOfDay(undefined, index),
+    type: candidate.type,
+    score: candidate.score,
+    matchReasons: candidate.matchReasons,
+    tags: candidate.tags,
+    noveltyLevel: candidate.noveltyLevel,
+    neighborhood: candidate.neighborhood,
+    indoorOutdoor: candidate.indoorOutdoor,
+    trendScore: candidate.trendScore,
+  };
+}
+
+function priceForCandidate(candidate: CityCandidate): string {
+  if (candidate.budgetTier === "free") return "Free";
+  if (candidate.budgetTier === "budget") return "₹";
+  if (candidate.budgetTier === "luxury") return "₹₹₹";
+  return "₹₹";
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).filter(Boolean);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return [value.trim()];
+  }
+
+  return [];
+}
+
+function optionalString(value: unknown): string | undefined {
+  const normalized = String(value || "").trim();
+  return normalized || undefined;
+}
+
+function numberOrUndefined(value: unknown): number | undefined {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+}
+
+function normalizeNoveltyLevel(value: unknown): ItineraryActivity["noveltyLevel"] {
+  const normalized = String(value || "").toLowerCase();
+  if (["iconic", "popular-local", "hidden-gem", "niche"].includes(normalized)) {
+    return normalized as ItineraryActivity["noveltyLevel"];
+  }
+  return undefined;
+}
+
+function normalizeIndoorOutdoor(value: unknown): ItineraryActivity["indoorOutdoor"] {
+  const normalized = String(value || "").toLowerCase();
+  if (["indoor", "outdoor", "mixed"].includes(normalized)) {
+    return normalized as ItineraryActivity["indoorOutdoor"];
+  }
+  return undefined;
+}
+
+function buildFallbackRecommendations(
+  location: string,
+  duration: string,
+  rankedCandidates: Array<CityCandidate & { score: number; matchReasons: string[] }> = [],
+  preferences?: z.infer<typeof preferenceSchema>
+): Recommendation[] {
+  const candidateRecommendations = rankedCandidates.slice(0, 3).map((candidate, index) => ({
+    id: `rec-candidate-${index + 1}`,
+    title: `${candidate.title} Route`,
+    description: `${candidate.trendReason} Build a focused plan around ${candidate.neighborhood} with stops that match your selected vibe.`,
+    image: getRandomImageForCategory(candidate.imageCategory),
+    rating: candidate.rating,
+    duration: candidate.estimatedDuration || duration,
+    score: candidate.score,
+    matchReasons: candidate.matchReasons,
+    tags: candidate.tags,
+    noveltyLevel: candidate.noveltyLevel,
+    neighborhood: candidate.neighborhood,
+    indoorOutdoor: candidate.indoorOutdoor,
+    trendScore: candidate.trendScore,
+    seedRecommendation: {
+      city: candidate.city,
+      tags: candidate.tags,
+      mood: preferences?.mood || [],
+      duration,
+      budget: preferences?.budget,
+      seedPlaces: [candidate.title],
+      title: `${candidate.title} Route`,
+    },
+  }));
+
+  if (candidateRecommendations.length >= 3) {
+    return candidateRecommendations;
+  }
+
+  const fallbackRecommendations: Recommendation[] = [
     {
       id: "rec-gemini-1",
       title: `${location} Heritage Walk`,
@@ -1327,6 +1751,10 @@ function buildFallbackRecommendations(location: string, duration: string): Recom
       image: getRandomImageForCategory("historical landmarks"),
       rating: "4.7 ★",
       duration,
+      matchReasons: ["Cultural fit", "Local discovery"],
+      tags: ["heritage", "walkable"],
+      noveltyLevel: "popular-local",
+      seedRecommendation: { city: location, tags: ["heritage", "walkable"], duration, title: `${location} Heritage Walk` },
     },
     {
       id: "rec-gemini-2",
@@ -1335,6 +1763,10 @@ function buildFallbackRecommendations(location: string, duration: string): Recom
       image: getRandomImageForCategory("restaurant dining"),
       rating: "4.8 ★",
       duration: "3-4 hours",
+      matchReasons: ["Foodie match", "Easy transit"],
+      tags: ["foodie", "local"],
+      noveltyLevel: "popular-local",
+      seedRecommendation: { city: location, tags: ["foodie", "local"], duration: "3-4 hours", title: `${location} Food Trail` },
     },
     {
       id: "rec-gemini-3",
@@ -1343,11 +1775,44 @@ function buildFallbackRecommendations(location: string, duration: string): Recom
       image: getRandomImageForCategory("city exploration"),
       rating: "4.6 ★",
       duration: "Half day",
+      matchReasons: ["Relaxed pacing", "Low friction"],
+      tags: ["relaxed", "scenic"],
+      noveltyLevel: "hidden-gem",
+      seedRecommendation: { city: location, tags: ["relaxed", "scenic"], duration: "Half day", title: `${location} Easygoing City Edit` },
     },
   ];
+
+  return fallbackRecommendations.slice(0, 3);
 }
 
-function buildFallbackActivities(location: string): ItineraryActivity[] {
+function buildFallbackActivities(
+  location: string,
+  rankedCandidates: Array<CityCandidate & { score: number; matchReasons: string[] }> = []
+): ItineraryActivity[] {
+  const candidateActivities = rankedCandidates.slice(0, 6).map((candidate, index) => ({
+    id: `candidate-act-${index + 1}`,
+    time: defaultTimeForIndex(index),
+    title: candidate.title,
+    description: `${candidate.trendReason} This stop fits a ${candidate.noveltyLevel.replace("-", " ")} route around ${candidate.neighborhood}.`,
+    location: candidate.address,
+    image: getRandomImageForCategory(candidate.imageCategory),
+    price: priceForCandidate(candidate),
+    rating: candidate.rating,
+    timeOfDay: normalizeTimeOfDay(undefined, index),
+    type: candidate.type,
+    score: candidate.score,
+    matchReasons: candidate.matchReasons,
+    tags: candidate.tags,
+    noveltyLevel: candidate.noveltyLevel,
+    neighborhood: candidate.neighborhood,
+    indoorOutdoor: candidate.indoorOutdoor,
+    trendScore: candidate.trendScore,
+  }));
+
+  if (candidateActivities.length >= 6) {
+    return candidateActivities;
+  }
+
   return [
     {
       id: "fallback-act-1",

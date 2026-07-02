@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
+import posthog from "./posthog.js";
 import fs from "fs";
 import path from "path";
 
@@ -96,5 +97,9 @@ app.use((req, res, next) => {
   // Windows doesn't support reusePort option
   server.listen(port, () => {
     log(`serving on port ${port}`);
+  });
+
+  process.on("SIGTERM", async () => {
+    await posthog.shutdown();
   });
 })();

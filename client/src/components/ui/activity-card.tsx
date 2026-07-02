@@ -1,9 +1,10 @@
 import { useToast } from "@/hooks/use-toast";
 import { ItineraryActivity } from "@/lib/openai";
+import { trackRecommendationEvent } from "@/lib/recommendation-events";
 import { ScrapbookImage } from "./scrapbook-image";
 import { motion } from "framer-motion";
 import { buildMapsSearchUrl, buildWebSearchUrl } from "@/lib/location-links";
-import { Bookmark, ExternalLink, MapPin, Navigation, Star } from "lucide-react";
+import { Bookmark, ExternalLink, MapPin, Navigation, Sparkles, Star } from "lucide-react";
 
 interface ActivityCardProps {
   activity: ItineraryActivity;
@@ -13,6 +14,11 @@ interface ActivityCardProps {
 
 export function ActivityCard({ activity, timeOfDay, isLast }: ActivityCardProps) {
   const { toast } = useToast();
+  const badges = [
+    activity.noveltyLevel?.replace("-", " "),
+    activity.trendScore && activity.trendScore >= 80 ? "Trending" : undefined,
+    ...(activity.matchReasons || []),
+  ].filter(Boolean).slice(0, 3);
 
   const handleDirection = () => {
     window.open(buildMapsSearchUrl(`${activity.title} ${activity.location}`), "_blank", "noopener,noreferrer");
@@ -39,6 +45,13 @@ export function ActivityCard({ activity, timeOfDay, isLast }: ActivityCardProps)
         "hangoutHeroBookmarks",
         JSON.stringify([...savedBookmarks, activity])
       );
+      trackRecommendationEvent({
+        eventType: "bookmarked_activity",
+        entityType: "activity",
+        entityId: activity.id,
+        activityId: activity.id,
+        metadata: { title: activity.title, tags: activity.tags, location: activity.location },
+      });
     }
 
     toast({
@@ -83,6 +96,19 @@ export function ActivityCard({ activity, timeOfDay, isLast }: ActivityCardProps)
           <div className="mb-3 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h4 className="mb-2 font-heading text-xl font-bold leading-tight text-gray-800 md:text-2xl">{activity.title}</h4>
+              {badges.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {badges.map((badge) => (
+                    <span
+                      key={badge}
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/10 px-2.5 py-1 text-[11px] font-bold capitalize text-primary"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      {badge}
+                    </span>
+                  ))}
+                </div>
+              )}
               <p className="mb-3 text-sm leading-6 text-gray-600 md:mb-4 md:text-base md:leading-relaxed">{activity.description}</p>
             </div>
             <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col">

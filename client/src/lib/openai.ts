@@ -30,6 +30,23 @@ export interface ItineraryActivity {
     lat: number;
     lng: number;
   };
+  score?: number;
+  matchReasons?: string[];
+  tags?: string[];
+  noveltyLevel?: string;
+  neighborhood?: string;
+  indoorOutdoor?: string;
+  trendScore?: number;
+}
+
+export interface SeedRecommendation {
+  city?: string;
+  tags?: string[];
+  mood?: string[];
+  duration?: string;
+  budget?: string;
+  seedPlaces?: string[];
+  title?: string;
 }
 
 export interface Recommendation {
@@ -39,6 +56,14 @@ export interface Recommendation {
   image: string;
   rating: string;
   duration: string;
+  score?: number;
+  matchReasons?: string[];
+  tags?: string[];
+  noveltyLevel?: string;
+  neighborhood?: string;
+  indoorOutdoor?: string;
+  trendScore?: number;
+  seedRecommendation?: SeedRecommendation;
 }
 
 export interface ItineraryResponse {
@@ -54,11 +79,13 @@ export interface ItineraryResponse {
 
 export async function generateItinerary(
   preferences: PreferenceFormData,
-  locationData: LocationFormData
+  locationData: LocationFormData,
+  seedRecommendation?: SeedRecommendation
 ): Promise<ItineraryResponse> {
   const response = await apiRequest("POST", "/api/generate-itinerary", {
     preferences,
     locationData,
+    seedRecommendation,
   });
   return await response.json();
 }
